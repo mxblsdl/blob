@@ -105,8 +105,12 @@
           .then((data) => {
             fileList.innerHTML = ""; // Clear the current list
             data.filenames.forEach((file) => {
-              let li = document.createElement("div");
-              li.textContent = file.filename;
+              let li = document.createElement("li");
+              let a = document.createElement("a");
+              a.href = `/files/${file.filename}`;
+              a.textContent = file.filename;
+              a.download = file.filename;
+              li.appendChild(a);
               fileList.appendChild(li);
             });
           })
