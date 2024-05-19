@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse
 import aiosqlite
 
 
@@ -35,7 +35,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["POST"],
+    allow_methods=["POST", "GET"],
     allow_headers=["*"],
 )
 
@@ -49,22 +49,33 @@ async def get_db():
 
 
 @app.post("/upload/")
-async def upload_file(file: UploadFile = File(...), db: aiosqlite.Connection = Depends(get_db)):
+async def upload_file(
+    file: UploadFile = File(...), db: aiosqlite.Connection = Depends(get_db)
+):
     try:
         file_contents = await file.read()
-        await db.execute('''
+        await db.execute(
+            """
             INSERT OR REPLACE INTO data (id, bin) VALUES (?, ?)
-        ''', (file.filename, file_contents))
+        """,
+            (file.filename, file_contents),
+        )
         await db.commit()
         return {"filename": file.filename}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 
 @app.get("/files/")
 async def get_files(db: aiosqlite.Connection = Depends(get_db)):
-    cursor = await db.execute('SELECT id FROM data')
-    files = await cursor.fetchall()
-    if files is None:
-        raise HTTPException(status_code=404, detail="File not found")
-    return {"filename": files}  # Decode BLOB to string for JSON response
+    cursor = await db.execute("SELECT id FROM data")
+    rows = await cursor.fetchall()
+    filenames = [{"filename": row[0]} for row in rows]
+    return {"filenames": filenames}
+
+
+@app.get("/")
+async def main():
+    with open("./index.html", "r") as h:
+        html = h.read()
+    return HTMLResponse(html)
