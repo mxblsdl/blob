@@ -20,6 +20,9 @@
         display: inline flow-root list-item;
         padding: 1rem;
       }
+      .btn {
+        margin-left: 1rem;
+      }
     </style>
   </head>
   <body>
@@ -106,13 +109,36 @@
             fileList.innerHTML = ""; // Clear the current list
             data.filenames.forEach((file) => {
               let li = document.createElement("li");
+              // Add class here
+
               let a = document.createElement("a");
               a.href = `/files/${file.filename}`;
               a.textContent = file.filename;
               a.download = file.filename;
+
+              let button = document.createElement("button");
+              button.textContent = "delete";
+              button.className = "btn";
+              button.onclick = () => deleteFile(file.filename);
+
               li.appendChild(a);
+              li.appendChild(button);
               fileList.appendChild(li);
             });
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+
+      // Delete file from server
+      function deleteFile(fileId) {
+        console.log(fileId);
+        fetch(`/files/${fileId}`, {
+          method: "DELETE",
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log(data);
+            fetchFilenames(); // Refresh the file list after deletion
           })
           .catch((error) => console.error("Error:", error));
       }

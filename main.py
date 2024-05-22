@@ -79,7 +79,6 @@ async def get_files(db: aiosqlite.Connection = Depends(get_db)):
 async def get_file(file_id: str, db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute("SELECT id, bin FROM data WHERE id = ?", (file_id,))
     row = await cursor.fetchone()
-    print(row)
     if row is None:
         raise HTTPException(status_code=404, detail="File not found")
     filename, content = row
@@ -88,6 +87,16 @@ async def get_file(file_id: str, db: aiosqlite.Connection = Depends(get_db)):
         media_type="application/octet-stream",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@app.delete("/files/{file_id}")
+async def remove_file(file_id: str, db: aiosqlite.Connection = Depends(get_db)):
+    await db.execute(
+        "DELETE FROM data WHERE id = ?",
+        (file_id,),
+    )
+    await db.commit()
+    return {"message": "File Deleted"}
 
 
 @app.get("/")

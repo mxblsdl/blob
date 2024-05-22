@@ -4,4 +4,4 @@ This was a fun project to create a file upload webpage where a user could drag a
 
 I wanted to explore blob storage and the versatility of saving files in blob format with sqlite3. Building out the front end was one of the more challenging parts of the project since I'm not that familiar with javascript and fetch requests.
 
-## TODO allow for download of files
+## TODO create code to interact with API directly
