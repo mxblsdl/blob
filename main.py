@@ -1,55 +1,74 @@
 from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Response
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from passlib.context import CryptContext
+
 import aiosqlite
 
+from models import LoginData
+from db import init_db, init_user_db, get_db
 
-# TODO init database wtih filename as primary key, update on conflict
-
-
-# Initialize the database
-async def init_db():
-    async with aiosqlite.connect("file_uploads.db") as db:
-        await db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS data (
-                id TEXT PRIMARY KEY,
-                bin BLOB
-            )
-        """
-        )
-        await db.commit()
+pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await init_user_db()
     yield
 
 
+# Initialize app with running lifespan function on start up
 app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["POST", "GET"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-async def get_db():
-    db = await aiosqlite.connect("file_uploads.db")
-    await db.set_trace_callback(print)
-    try:
-        yield db
-    finally:
-        await db.close()
+@app.post("/login")
+async def login(login_data: LoginData, db: aiosqlite.Connection = Depends(get_db)):
+
+    cursor = await db.execute(
+        "SELECT * FROM users WHERE username = ?", (login_data.username,)
+    )
+    user = await cursor.fetchone()
+    print(user)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    print(user[1])
+    if not pwd_context.verify(login_data.password, user[1]):
+        raise HTTPException(status_code=401, detail="Invalid password")
+
+    # TODO Adjust what user sees based on login / prefix table with username
+    return {"username": login_data.username, "password": login_data.password}
 
 
-@app.post("/upload/")
+@app.post("/register")
+async def register(user_data: LoginData, db: aiosqlite.Connection = Depends(get_db)):
+    cursor = await db.execute("SELECT username FROM users")
+    users = await cursor.fetchall()
+    if any(user_data.username in values for values in users):
+        raise HTTPException(status_code=400, detail="Username already exists")
+    password = pwd_context.hash(user_data.password)
+
+    await db.execute(
+        "INSERT INTO users (username, password) VALUES (?, ?)",
+        (user_data.username, password),
+    )
+    await db.commit()
+
+    return {"message": "User registered successfully"}
+
+
+# Upload functionality
+@app.post("/upload")
 async def upload_file(
     file: UploadFile = File(...), db: aiosqlite.Connection = Depends(get_db)
 ):
@@ -67,7 +86,7 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/files/")
+@app.get("/files")
 async def get_files(db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute("SELECT id FROM data")
     rows = await cursor.fetchall()
@@ -99,8 +118,4 @@ async def remove_file(file_id: str, db: aiosqlite.Connection = Depends(get_db)):
     return {"message": "File Deleted"}
 
 
-@app.get("/")
-async def main():
-    with open("./index.html", "r") as h:
-        html = h.read()
-    return HTMLResponse(html)
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
