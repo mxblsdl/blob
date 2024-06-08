@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drag and Drop File Upload</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="login-container">
+      <h2>Login</h2>
+      <form id="login-form">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required />
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required />
+
+        <button type="submit">Login</button>
+      </form>
+      <button id="register" type="submit">Create New Login</button>
+
+      <div class="error-message" id="error-message"></div>
+      <div class="success-message" id="register-success-message"></div>
+    </div>
+
+    <div class="login-container" id="register-container">
+      <h2>Register</h2>
+      <form id="register-form">
+        <label for="register-username">Username:</label>
+        <input type="text" id="register-username" name="username" required />
+
+        <label for="register-password">Password:</label>
+        <input
+          type="password"
+          id="register-password"
+          name="password"
+          required
+        />
+
+        <button type="submit">Register</button>
+      </form>
+      <div class="error-message" id="register-error-message"></div>
+
+    </div>
+    <div id="dropbox">
+      <h2 id="greeting"></h2>
+      <h1>Drag and Drop File Upload</h1>
+      <div id="dropZone">Drop files here</div>
+
+      <h2>Uploaded Files</h2>
+      <ul id="fileList" class="items"></ul>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
