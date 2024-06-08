@@ -1,8 +1,6 @@
 import requests
 
 # Code to interact with API from a python script
-
-
 def upload_file(path: str) -> None:
     file = {"file": (path, open(path, "rb"))}
     response = requests.post("http://127.0.0.1:8000/upload/", files=file)
