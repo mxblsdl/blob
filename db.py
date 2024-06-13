@@ -1,6 +1,5 @@
 import aiosqlite
 
-
 # Initialize the database
 async def init_db():
     async with aiosqlite.connect("file_uploads.db") as db:
@@ -8,7 +7,8 @@ async def init_db():
             """
             CREATE TABLE IF NOT EXISTS data (
                 id TEXT PRIMARY KEY,
-                bin BLOB
+                bin BLOB,
+                user TEXT
             )
         """
         )

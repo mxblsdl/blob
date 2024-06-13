@@ -13,6 +13,11 @@ from db import init_db, init_user_db, get_db
 pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 
+# TODO add size to file information
+# TODO add date to file information
+# TODO display all information nicely in list
+# TODO make styling better
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
@@ -39,14 +44,13 @@ async def login(login_data: LoginData, db: aiosqlite.Connection = Depends(get_db
         "SELECT * FROM users WHERE username = ?", (login_data.username,)
     )
     user = await cursor.fetchone()
-    print(user)
+
     if user is None:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-    print(user[1])
+
     if not pwd_context.verify(login_data.password, user[1]):
         raise HTTPException(status_code=401, detail="Invalid password")
 
-    # TODO Adjust what user sees based on login / prefix table with username
     return {"username": login_data.username, "password": login_data.password}
 
 
@@ -68,17 +72,17 @@ async def register(user_data: LoginData, db: aiosqlite.Connection = Depends(get_
 
 
 # Upload functionality
-@app.post("/upload")
+@app.post("/upload/{username}")
 async def upload_file(
-    file: UploadFile = File(...), db: aiosqlite.Connection = Depends(get_db)
+    username: str,
+    file: UploadFile = File(...),
+    db: aiosqlite.Connection = Depends(get_db),
 ):
     try:
         file_contents = await file.read()
         await db.execute(
-            """
-            INSERT OR REPLACE INTO data (id, bin) VALUES (?, ?)
-        """,
-            (file.filename, file_contents),
+            "INSERT OR REPLACE INTO data (id, bin, user) VALUES (?, ?, ?)",
+            (file.filename, file_contents, username),
         )
         await db.commit()
         return {"filename": file.filename}
@@ -86,17 +90,26 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/files")
-async def get_files(db: aiosqlite.Connection = Depends(get_db)):
-    cursor = await db.execute("SELECT id FROM data")
+@app.get("/files/{username}")
+async def get_files(
+    username: str,
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    cursor = await db.execute("SELECT id FROM data WHERE user = ?", (username,))
     rows = await cursor.fetchall()
     filenames = [{"filename": row[0]} for row in rows]
     return {"filenames": filenames}
 
 
-@app.get("/files/{file_id}")
-async def get_file(file_id: str, db: aiosqlite.Connection = Depends(get_db)):
-    cursor = await db.execute("SELECT id, bin FROM data WHERE id = ?", (file_id,))
+@app.get("/files/{file_id}/user/{username}")
+async def get_file(
+    file_id: str,
+    username: str,
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    cursor = await db.execute(
+        "SELECT id, bin FROM data WHERE id = ? AND user = ?", (file_id, username)
+    )
     row = await cursor.fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="File not found")

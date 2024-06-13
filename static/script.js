@@ -27,6 +27,7 @@ document
       }
 
       const data = await response.json();
+      localStorage.setItem("username", data.username);
 
       // Handle successful login (e.g., display data or redirect to another page)
       console.log("Login successful:", data);
@@ -38,6 +39,7 @@ document
       document.getElementById(
         "greeting"
       ).innerHTML = `Welcome ${data.username}!`;
+      fetchFilenames();
     } catch (error) {
       console.error("Error:", error);
       errorMessageDiv.textContent = `Login failed: ${error.message}`;
@@ -136,8 +138,9 @@ function handleFiles(files) {
 function uploadFile(file) {
   let formData = new FormData();
   formData.append("file", file);
+  let username = localStorage.getItem("username");
 
-  fetch("http://127.0.0.1:8000/upload", {
+  fetch(`http://127.0.0.1:8000/upload/${username}`, {
     method: "POST",
     body: formData,
   })
@@ -152,7 +155,8 @@ function uploadFile(file) {
 
 // Fetch filenames from server
 function fetchFilenames() {
-  fetch("http://127.0.0.1:8000/files")
+  let username = localStorage.getItem("username");
+  fetch(`http://127.0.0.1:8000/files/${username}`)
     .then((response) => response.json())
     .then((data) => {
       fileList.innerHTML = ""; // Clear the current list
@@ -161,7 +165,7 @@ function fetchFilenames() {
         // Add class here
 
         let a = document.createElement("a");
-        a.href = `/files/${file.filename}`;
+        a.href = `/files/${file.filename}/user/${username}`;
         a.textContent = file.filename;
         a.download = file.filename;
 
@@ -193,4 +197,4 @@ function deleteFile(fileId) {
 }
 
 // Initial fetch of filenames when the page loads
-window.onload = fetchFilenames;
+// window.onload = fetchFilenames;
