@@ -3,6 +3,7 @@ const register_container = document.getElementById("register-container");
 const register = document.getElementById("register");
 register.onclick = () => (register_container.style["display"] = "block");
 
+// Login
 document
   .getElementById("login-form")
   .addEventListener("submit", async function (event) {
@@ -13,7 +14,7 @@ document
     const errorMessageDiv = document.getElementById("error-message");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/login", {
+      const response = await fetch("/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -48,6 +49,7 @@ document
 
 const register_form = document.getElementById("register-form");
 
+// Register
 register_form.addEventListener("submit", async function (event) {
   event.preventDefault(); // Prevent the form from submitting the default way
 
@@ -57,7 +59,7 @@ register_form.addEventListener("submit", async function (event) {
   const successMessageDiv = document.getElementById("register-success-message");
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/register", {
+    const response = await fetch("/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -140,7 +142,7 @@ function uploadFile(file) {
   formData.append("file", file);
   let username = localStorage.getItem("username");
 
-  fetch(`http://127.0.0.1:8000/upload/${username}`, {
+  fetch(`/upload/${username}`, {
     method: "POST",
     body: formData,
   })
@@ -156,7 +158,7 @@ function uploadFile(file) {
 // Fetch filenames from server
 function fetchFilenames() {
   let username = localStorage.getItem("username");
-  fetch(`http://127.0.0.1:8000/files/${username}`)
+  fetch(`/files/${username}`)
     .then((response) => response.json())
     .then((data) => {
       fileList.innerHTML = ""; // Clear the current list
@@ -185,7 +187,8 @@ function fetchFilenames() {
 // Delete file from server
 function deleteFile(fileId) {
   console.log(fileId);
-  fetch(`http://127.0.0.1:8000/files/${fileId}`, {
+  let username = localStorage.getItem("username");
+  fetch(`/files/${fileId}/user/${username}`, {
     method: "DELETE",
   })
     .then((response) => response.json())

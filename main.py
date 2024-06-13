@@ -17,6 +17,8 @@ pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 # TODO add date to file information
 # TODO display all information nicely in list
 # TODO make styling better
+# TODO add dockerfile
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -121,11 +123,15 @@ async def get_file(
     )
 
 
-@app.delete("/files/{file_id}")
-async def remove_file(file_id: str, db: aiosqlite.Connection = Depends(get_db)):
+@app.delete("/files/{file_id}/user/{username}")
+async def remove_file(
+    file_id: str,
+    username: str,
+    db: aiosqlite.Connection = Depends(get_db),
+):
     await db.execute(
-        "DELETE FROM data WHERE id = ?",
-        (file_id,),
+        "DELETE FROM data WHERE id = ? AND user = ?",
+        (file_id, username),
     )
     await db.commit()
     return {"message": "File Deleted"}
