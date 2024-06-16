@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from passlib.context import CryptContext
 
 import aiosqlite
+from datetime import datetime
 
 from models import LoginData
 from db import init_db, init_user_db, get_db
@@ -13,11 +14,8 @@ from db import init_db, init_user_db, get_db
 pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 
-# TODO add size to file information
-# TODO add date to file information
-# TODO display all information nicely in list
-# TODO make styling better
 # TODO add dockerfile
+# TODO create shareable link to file
 
 
 @asynccontextmanager
@@ -38,6 +36,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.ico")
 
 @app.post("/login")
 async def login(login_data: LoginData, db: aiosqlite.Connection = Depends(get_db)):
@@ -82,9 +83,14 @@ async def upload_file(
 ):
     try:
         file_contents = await file.read()
+        size = len(file_contents)
+        time = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+        # TODO add size to database
+        # TODO add date modified to database
         await db.execute(
-            "INSERT OR REPLACE INTO data (id, bin, user) VALUES (?, ?, ?)",
-            (file.filename, file_contents, username),
+            """INSERT OR REPLACE INTO 
+            data (id, bin, user, size, date) VALUES (?, ?, ?, ?, ?)""",
+            (file.filename, file_contents, username, size, time),
         )
         await db.commit()
         return {"filename": file.filename}
@@ -97,13 +103,22 @@ async def get_files(
     username: str,
     db: aiosqlite.Connection = Depends(get_db),
 ):
-    cursor = await db.execute("SELECT id FROM data WHERE user = ?", (username,))
+    cursor = await db.execute(
+        "SELECT id, size, date FROM data WHERE user = ?", (username,)
+    )
     rows = await cursor.fetchall()
-    filenames = [{"filename": row[0]} for row in rows]
-    return {"filenames": filenames}
+    files = [
+        {
+            "filename": row[0],
+            "size": row[1],
+            "created_at": row[2],
+        }
+        for row in rows
+    ]
+    return {"files": files}
 
 
-@app.get("/files/{file_id}/user/{username}")
+@app.get("/user/{username}/files/{file_id}")
 async def get_file(
     file_id: str,
     username: str,
@@ -123,7 +138,7 @@ async def get_file(
     )
 
 
-@app.delete("/files/{file_id}/user/{username}")
+@app.delete("/user/{username}/files/{file_id}")
 async def remove_file(
     file_id: str,
     username: str,

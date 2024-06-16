@@ -87,7 +87,8 @@ register_form.addEventListener("submit", async function (event) {
 });
 
 const dropZone = document.getElementById("dropZone");
-const fileList = document.getElementById("fileList");
+// const fileList = document.getElementById("fileList");
+const fileTableBody = document.querySelector("#fileList tbody");
 
 // Prevent default behavior for drag-and-drop events
 ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
@@ -161,24 +162,29 @@ function fetchFilenames() {
   fetch(`/files/${username}`)
     .then((response) => response.json())
     .then((data) => {
-      fileList.innerHTML = ""; // Clear the current list
-      data.filenames.forEach((file) => {
-        let li = document.createElement("li");
-        // Add class here
+      console.log(data);
 
-        let a = document.createElement("a");
-        a.href = `/files/${file.filename}/user/${username}`;
-        a.textContent = file.filename;
-        a.download = file.filename;
+      fileTableBody.innerHTML = ""; // Clear the current list
+      data.files.forEach((file) => {
+        if ((file.size > 1000) & (file.size < 9999)) {
+          size = (file.size / 1000).toFixed(1) + " kb";
+        } else if ((file.size > 9999) & (file.size < 9999999)) {
+          size = (file.size / 1000000).toFixed(1) + " Mb";
+        } else {
+          size = file.size + " bytes";
+        }
 
-        let button = document.createElement("button");
-        button.textContent = "delete";
-        button.className = "btn";
-        button.onclick = () => deleteFile(file.filename);
-
-        li.appendChild(a);
-        li.appendChild(button);
-        fileList.appendChild(li);
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${file.filename}</td>
+            <td>${size}</td>
+            <td>${file.created_at}</td>
+            <td>
+                <a href="/user/${username}/files/${file.filename}" target="_blank">Download</a>
+                <a onclick="deleteFile('${file.filename}')">Delete</a>
+            </td>
+        `;
+        fileTableBody.appendChild(row);
       });
     })
     .catch((error) => console.error("Error:", error));
@@ -186,9 +192,9 @@ function fetchFilenames() {
 
 // Delete file from server
 function deleteFile(fileId) {
-  console.log(fileId);
+  // console.log(fileId);
   let username = localStorage.getItem("username");
-  fetch(`/files/${fileId}/user/${username}`, {
+  fetch(`/user/${username}/files/${fileId}`, {
     method: "DELETE",
   })
     .then((response) => response.json())
@@ -198,6 +204,3 @@ function deleteFile(fileId) {
     })
     .catch((error) => console.error("Error:", error));
 }
-
-// Initial fetch of filenames when the page loads
-// window.onload = fetchFilenames;
