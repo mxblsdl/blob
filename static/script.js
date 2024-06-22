@@ -182,6 +182,7 @@ function fetchFilenames() {
             <td>
                 <a href="/user/${username}/files/${file.filename}" target="_blank">Download</a>
                 <a onclick="deleteFile('${file.filename}')">Delete</a>
+                <a onclick="createLink('${file.id}')">Create Link</a>
             </td>
         `;
         fileTableBody.appendChild(row);
@@ -203,4 +204,16 @@ function deleteFile(fileId) {
       fetchFilenames(); // Refresh the file list after deletion
     })
     .catch((error) => console.error("Error:", error));
+}
+
+function createLink(file_id) {
+  fetch(`/generateLink/${file_id}`, {
+    method: "POST",
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log(data);
+      navigator.clipboard.writeText(data.link);
+    })
+    .catch((error) => console.error("error: ", error));
 }
