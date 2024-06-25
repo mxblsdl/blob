@@ -11,7 +11,6 @@ document
 
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
-    const errorMessageDiv = document.getElementById("error-message");
 
     try {
       const response = await fetch("/login", {
@@ -31,8 +30,6 @@ document
       localStorage.setItem("username", data.username);
 
       // Handle successful login (e.g., display data or redirect to another page)
-      console.log("Login successful:", data);
-      //   errorMessageDiv.textContent = "Login Successful"; // Clear any previous error message
       document.getElementById("dropbox").style["display"] = "block";
       document.querySelectorAll(".login-container").forEach((el) => {
         el.style.display = "None";
@@ -42,8 +39,7 @@ document
       ).innerHTML = `Welcome ${data.username}!`;
       fetchFilenames();
     } catch (error) {
-      console.error("Error:", error);
-      errorMessageDiv.textContent = `Login failed: ${error.message}`;
+      alertify.error(`Login failed: ${error.message}`)
     }
   });
 
@@ -55,7 +51,6 @@ register_form.addEventListener("submit", async function (event) {
 
   const username = document.getElementById("register-username").value;
   const password = document.getElementById("register-password").value;
-  const errorMessageDiv = document.getElementById("register-error-message");
   const successMessageDiv = document.getElementById("register-success-message");
 
   try {
@@ -76,12 +71,11 @@ register_form.addEventListener("submit", async function (event) {
 
     // Handle successful registration
     console.log("Registration successful:", data);
-    errorMessageDiv.textContent = ""; // Clear any previous error message
     successMessageDiv.textContent = "User registered successfully";
     register_container.style["display"] = "None";
   } catch (error) {
     console.error("Error:", error);
-    errorMessageDiv.textContent = `Registration failed: ${error.message}`;
+    alertify.error(`Registration failed: ${error.message}`);
     successMessageDiv.textContent = ""; // Clear success message on error
   }
 });
@@ -193,14 +187,12 @@ function fetchFilenames() {
 
 // Delete file from server
 function deleteFile(fileId) {
-  // console.log(fileId);
   let username = localStorage.getItem("username");
   fetch(`/user/${username}/files/${fileId}`, {
     method: "DELETE",
   })
     .then((response) => response.json())
     .then((data) => {
-      console.log(data);
       fetchFilenames(); // Refresh the file list after deletion
     })
     .catch((error) => console.error("Error:", error));
@@ -212,7 +204,7 @@ function createLink(file_id) {
   })
     .then((response) => response.json())
     .then((data) => {
-      console.log(data);
+      alertify.success("Link copied to clipboard!");
       navigator.clipboard.writeText(data.link);
     })
     .catch((error) => console.error("error: ", error));

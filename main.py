@@ -21,7 +21,6 @@ from db import init_db, get_db, generate_token
 pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 # TODO add dockerfile
-# TODO create shareable link to file
 # TODO upgrade auth for programmatic interactions
 # issue api keys for upload and download?
 
@@ -64,19 +63,20 @@ async def login(login_data: LoginData, db: sqlite3.Connection = Depends(get_db))
 
 @app.post("/register")
 async def register(user_data: LoginData, db: sqlite3.Connection = Depends(get_db)):
-    cursor = db.execute("SELECT username FROM users")
-    users = cursor.fetchall()
-    if any(user_data.username in values for values in users):
-        raise HTTPException(status_code=400, detail="Username already exists")
-    password = pwd_context.hash(user_data.password)
+    with db as conn:
 
-    db.execute(
-        "INSERT INTO users (username, password) VALUES (?, ?)",
-        (user_data.username, password),
-    )
-    # db.commit()
+        cursor = conn.execute("SELECT username FROM users")
+        users = cursor.fetchall()
+        if any(user_data.username in values for values in users):
+            raise HTTPException(status_code=400, detail="Username already exists")
+        password = pwd_context.hash(user_data.password)
 
-    return {"message": "User registered successfully"}
+        conn.execute(
+            "INSERT INTO users (username, password) VALUES (?, ?)",
+            (user_data.username, password),
+        )
+
+        return {"message": "User registered successfully"}
 
 
 # Upload functionality
