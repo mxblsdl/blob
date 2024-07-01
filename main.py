@@ -25,8 +25,6 @@ from db import init_db, get_db, generate_token
 pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 # TODO add dockerfile
-# TODO upgrade auth for programmatic interactions
-# issue api keys for upload and download?
 
 # API Key dependency
 api_key_header = APIKeyHeader(name="access_token", auto_error=True)
@@ -36,7 +34,6 @@ async def get_api_key(
     api_key_header: str = Security(api_key_header),
     db: sqlite3.Connection = Depends(get_db),
 ):
-    # TODO how to deal with API KEY
     cur = db.cursor()
     cur.execute("SELECT * FROM keys WHERE key = ?", (api_key_header,))
     key_record = cur.fetchone()
@@ -72,11 +69,10 @@ async def on_startup():
 async def favicon():
     return FileResponse("static/favicon.ico")
 
-
+# Routes
 @app.post("/login")
 async def login(login_data: LoginData, db: sqlite3.Connection = Depends(get_db)):
 
-    # TODO return api key value on login
     with db as conn:
         cursor = conn.execute(
             """SELECT
@@ -90,7 +86,6 @@ async def login(login_data: LoginData, db: sqlite3.Connection = Depends(get_db))
             (login_data.username,),
         )
         user = cursor.fetchone()
-    print(user)
 
     if user is None:
         raise HTTPException(status_code=401, detail="Invalid username or password")
@@ -103,8 +98,8 @@ async def login(login_data: LoginData, db: sqlite3.Connection = Depends(get_db))
 
 @app.post("/register")
 async def register(user_data: LoginData, db: sqlite3.Connection = Depends(get_db)):
-    with db as conn:
 
+    with db as conn:
         cursor = conn.execute("SELECT username FROM users")
         users = cursor.fetchall()
         if any(user_data.username in values for values in users):
@@ -221,9 +216,7 @@ async def generate_link(
     file_id: int,
     db: sqlite3.Connection = Depends(get_db),
 ):
-    # TODO how is file_id passed to function?
     with db as conn:
-        # cursor = conn.cursor()
         cur = conn.execute("SELECT id FROM data WHERE id = ?", (file_id,))
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="File not found")
