@@ -1,16 +1,15 @@
 import sqlite3
 import secrets
 import datetime
-from contextlib import contextmanager
 
 TOKEN_EXP_MINUTES = 30
 
 
 # Create database connection
-@contextmanager
 def get_db():
-    db = sqlite3.connect("file_uploads.db")
-    db.set_trace_callback(print)
+    db = sqlite3.connect("file_uploads.db", check_same_thread=False)
+    db.row_factory = sqlite3.Row
+    # db.set_trace_callback(print)
     try:
         yield db
     finally:
@@ -20,8 +19,9 @@ def get_db():
 
 # Initialize the database
 def init_db():
-    with get_db() as db:
-        db.execute(
+    with sqlite3.connect("file_uploads.db") as db:
+        cur = db.cursor()
+        cur.execute(
             """
             CREATE TABLE IF NOT EXISTS data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,21 +33,31 @@ def init_db():
             )
         """
         )
-        db.execute(
+        cur.execute(
             """
             CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL,
                 password TEXT NOT NULL
             )
         """
         )
-        db.execute(
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS keys (
+            key_id INTEGER NOT NULL,
+            key TEXT,
+            FOREIGN KEY (key_id) REFERENCES user(id) ON DELETE CASCADE
+            )
+        """
+        )
+        cur.execute(
             """
         CREATE TABLE IF NOT EXISTS tokens (
             token TEXT PRIMARY KEY,
             file_id INTEGER NOT NULL,
             expires_at TIMESTAMP NOT NULL,
-            FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+            FOREIGN KEY (file_id) REFERENCES data(id) ON DELETE CASCADE
         )"""
         )
         db.commit()
@@ -57,7 +67,7 @@ def generate_token(file_id: int):
     token = secrets.token_urlsafe(16)
     expires_at = datetime.datetime.now() + datetime.timedelta(minutes=TOKEN_EXP_MINUTES)
 
-    with get_db() as conn:
+    with sqlite3.connect("file_uploads.db") as conn:
         conn.execute(
             """
         INSERT INTO tokens (token, file_id, expires_at)

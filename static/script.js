@@ -27,7 +27,11 @@ document
       }
 
       const data = await response.json();
+      console.log(data);
       localStorage.setItem("username", data.username);
+      localStorage.setItem("apikey", data.apikey);
+      // TODO store the API key which will get stored in a separate table
+      // TODO display apikey once when user registers
 
       // Handle successful login (e.g., display data or redirect to another page)
       document.getElementById("dropbox").style["display"] = "block";
@@ -39,7 +43,7 @@ document
       ).innerHTML = `Welcome ${data.username}!`;
       fetchFilenames();
     } catch (error) {
-      alertify.error(`Login failed: ${error.message}`)
+      alertify.error(`Login failed: ${error.message}`);
     }
   });
 
@@ -140,6 +144,9 @@ function uploadFile(file) {
   fetch(`/upload/${username}`, {
     method: "POST",
     body: formData,
+    headers: {
+      access_token: localStorage.getItem("apikey"),
+    },
   })
     .then((response) => response.json())
     .then((data) => {
@@ -153,7 +160,11 @@ function uploadFile(file) {
 // Fetch filenames from server
 function fetchFilenames() {
   let username = localStorage.getItem("username");
-  fetch(`/files/${username}`)
+  fetch(`/files/${username}`, {
+    headers: {
+      access_token: localStorage.getItem("apikey"),
+    },
+  })
     .then((response) => response.json())
     .then((data) => {
       console.log(data);
@@ -174,8 +185,8 @@ function fetchFilenames() {
             <td>${size}</td>
             <td>${file.created_at}</td>
             <td>
-                <a href="/user/${username}/files/${file.filename}" target="_blank">Download</a>
-                <a onclick="deleteFile('${file.filename}')">Delete</a>
+                <a onclick="downloadFile('${file.id}')">Download</a>
+                <a onclick="deleteFile('${file.id}')">Delete</a>
                 <a onclick="createLink('${file.id}')">Create Link</a>
             </td>
         `;
@@ -185,14 +196,41 @@ function fetchFilenames() {
     .catch((error) => console.error("Error:", error));
 }
 
+async function downloadFile(file_id) {
+  const response = await fetch(`/user/files/${file_id}`, {
+    method: "GET",
+    headers: {
+      access_token: localStorage.getItem("apikey"),
+    },
+  }).catch((error) => console.error("Error:", error));
+
+  const disposition = response.headers.get("Content-Disposition");
+  const filename = disposition.match(/filename="?([^"]*)"?/)[1];
+
+  // Create a Blob from the response
+  const blob = await response.blob();
+
+  // Create a link element, set the download attribute and click it
+  const link = document.createElement("a");
+  const objectURL = URL.createObjectURL(blob);
+  link.href = objectURL;
+  link.download = filename; // Set the filename here
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(objectURL); // Clean up
+}
+
 // Delete file from server
 function deleteFile(fileId) {
-  let username = localStorage.getItem("username");
-  fetch(`/user/${username}/files/${fileId}`, {
+  fetch(`/user/files/remove/${fileId}`, {
     method: "DELETE",
+    headers: {
+      access_token: localStorage.getItem("apikey"),
+    },
   })
     .then((response) => response.json())
-    .then((data) => {
+    .then(() => {
       fetchFilenames(); // Refresh the file list after deletion
     })
     .catch((error) => console.error("Error:", error));
@@ -201,6 +239,9 @@ function deleteFile(fileId) {
 function createLink(file_id) {
   fetch(`/generateLink/${file_id}`, {
     method: "POST",
+    headers: {
+      access_token: localStorage.getItem("apikey"),
+    },
   })
     .then((response) => response.json())
     .then((data) => {
