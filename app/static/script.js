@@ -3,6 +3,7 @@ const register_container = document.getElementById("register-container");
 const register = document.getElementById("register");
 register.onclick = () => (register_container.style["display"] = "block");
 
+// TODO refactor for consistency?
 // Login
 document
   .getElementById("login-form")
@@ -25,13 +26,9 @@ document
         const errorData = await response.json();
         throw new Error(errorData.detail);
       }
-
       const data = await response.json();
-      console.log(data);
-      localStorage.setItem("username", data.username);
+
       localStorage.setItem("apikey", data.apikey);
-      // TODO store the API key which will get stored in a separate table
-      // TODO display apikey once when user registers
 
       // Handle successful login (e.g., display data or redirect to another page)
       document.getElementById("dropbox").style["display"] = "block";
@@ -55,33 +52,21 @@ register_form.addEventListener("submit", async function (event) {
 
   const username = document.getElementById("register-username").value;
   const password = document.getElementById("register-password").value;
-  const successMessageDiv = document.getElementById("register-success-message");
 
-  try {
-    const response = await fetch("/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail);
+  fetch("/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username, password }),
+  }).then((response) => {
+    if (response.status !== 200) {
+      alertify.error("Registration failed: User already exists");
+    } else {
+      alertify.success("User registered successfully");
+      register_container.style["display"] = "None";
     }
-
-    const data = await response.json();
-
-    // Handle successful registration
-    console.log("Registration successful:", data);
-    successMessageDiv.textContent = "User registered successfully";
-    register_container.style["display"] = "None";
-  } catch (error) {
-    console.error("Error:", error);
-    alertify.error(`Registration failed: ${error.message}`);
-    successMessageDiv.textContent = ""; // Clear success message on error
-  }
+  });
 });
 
 const dropZone = document.getElementById("dropZone");
@@ -139,9 +124,8 @@ function handleFiles(files) {
 function uploadFile(file) {
   let formData = new FormData();
   formData.append("file", file);
-  let username = localStorage.getItem("username");
 
-  fetch(`/upload/${username}`, {
+  fetch(`/upload`, {
     method: "POST",
     body: formData,
     headers: {
@@ -153,22 +137,18 @@ function uploadFile(file) {
       console.log(data);
       fetchFilenames();
     })
-
     .catch((error) => console.error("Error:", error));
 }
 
 // Fetch filenames from server
 function fetchFilenames() {
-  let username = localStorage.getItem("username");
-  fetch(`/files/${username}`, {
+  fetch(`/files`, {
     headers: {
       access_token: localStorage.getItem("apikey"),
     },
   })
     .then((response) => response.json())
     .then((data) => {
-      console.log(data);
-
       fileTableBody.innerHTML = ""; // Clear the current list
       data.files.forEach((file) => {
         if ((file.size > 1000) & (file.size < 9999)) {

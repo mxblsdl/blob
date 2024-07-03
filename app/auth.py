@@ -18,7 +18,13 @@ async def get_api_key(
     db: sqlite3.Connection = Depends(get_db),
 ):
     cur = db.cursor()
-    cur.execute("SELECT * FROM keys WHERE key = ?", (api_key_header,))
+    cur.execute(
+        """SELECT u.username
+            FROM users u
+            JOIN keys k ON u.id = k.key_id
+            WHERE k.key = ?""",
+        (api_key_header,),
+    )
     key_record = cur.fetchone()
 
     if key_record is None:
@@ -27,4 +33,4 @@ async def get_api_key(
             detail="Could not validate credentials",
         )
 
-    return key_record["key"]
+    return key_record["username"]

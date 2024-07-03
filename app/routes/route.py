@@ -6,17 +6,19 @@ from app.dependencies.db import get_db, generate_token
 from app.auth import pwd_context, get_api_key
 
 import sqlite3
-import datetime
+from datetime import datetime
 from pydantic import BaseModel
 import secrets
 import io
 
-# TODO get rid of this
+
 class LoginData(BaseModel):
     username: str
     password: str
 
+
 router = APIRouter()
+
 
 # Routes
 @router.post("/login")
@@ -73,13 +75,13 @@ async def register(user_data: LoginData, db: sqlite3.Connection = Depends(get_db
 
 
 # Upload functionality
-@router.post("/upload/{username}", dependencies=[Depends(get_api_key)])
+@router.post("/upload")
 async def upload_file(
-    username: str,
+    username=Depends(get_api_key),
     file: UploadFile = File(...),
     db: sqlite3.Connection = Depends(get_db),
 ):
-
+    print(username)
     try:
         cursor = db.cursor()
         file_contents = await file.read()
@@ -99,9 +101,9 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/files/{username}", dependencies=[Depends(get_api_key)])
+@router.get("/files")
 async def get_files(
-    username: str,
+    username: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
