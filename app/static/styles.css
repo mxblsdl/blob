@@ -76,3 +76,13 @@
 #register-container {
   display: none;
 }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+}
+
+#api-key,
+#api-manage {
+  height: 2rem;
+}

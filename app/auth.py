@@ -16,7 +16,7 @@ api_key_header = APIKeyHeader(name="access_token", auto_error=True)
 async def get_api_key(
     api_key_header: str = Security(api_key_header),
     db: sqlite3.Connection = Depends(get_db),
-):
+) -> str:
     cur = db.cursor()
     cur.execute(
         """SELECT u.username

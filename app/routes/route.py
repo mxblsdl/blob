@@ -210,3 +210,58 @@ async def get_file_by_token(
         media_type="application/octet-stream",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+# ? Different file
+@router.post("/generate-api-key")
+async def generate_api_key(
+    username: str = Depends(get_api_key),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    new_key = secrets.token_urlsafe(16)
+
+    # return apikey
+    with db as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+        SELECT
+            id
+        FROM
+            users
+        WHERE username = ?;
+        """,
+            (username,),
+        )
+        result = cursor.fetchone()
+
+        # cursor.execute(
+        #     "INSERT INTO keys (key_id, key) VALUES (?, ?)",
+        #     (result["id"], new_key),
+        # )
+        # conn.commit()
+
+    return new_key
+
+
+@router.get("/get-api-key")
+async def get_api_keys(
+    username: str = Depends(get_api_key),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    n = 15
+    with db as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT k.key
+            FROM users u
+            JOIN keys k ON u.id = k.key_id
+            WHERE u.username = ?
+            """,
+            (username,),
+        )
+        result = cursor.fetchall()
+    keys = ["*" * n + r["key"][n:] for r in result]
+
+    return {"keys": keys}
