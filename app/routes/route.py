@@ -31,7 +31,7 @@ async def login(login_data: LoginData, db: sqlite3.Connection = Depends(get_db))
             u.password,
             k.key
             FROM users u
-            JOIN keys k ON u.id = k.key_id
+            JOIN keys k ON u.id = k.user_id
             WHERE u.username = ?
             """,
             (login_data.username,),
@@ -69,7 +69,10 @@ async def register(user_data: LoginData, db: sqlite3.Connection = Depends(get_db
         # generate key for general use
         id = cur.fetchone()
         key = secrets.token_urlsafe(16)
-        conn.execute("INSERT INTO keys (key_id, key) VALUES (?, ?)", (id[0], key))
+        conn.execute(
+            "INSERT INTO keys (user_id, key, is_login) VALUES (?, ?, ?)",
+            (id[0], key, "Y"),
+        )
 
         return {"message": "User registered successfully"}
 
@@ -81,7 +84,6 @@ async def upload_file(
     file: UploadFile = File(...),
     db: sqlite3.Connection = Depends(get_db),
 ):
-    print(username)
     try:
         cursor = db.cursor()
         file_contents = await file.read()
@@ -235,11 +237,11 @@ async def generate_api_key(
         )
         result = cursor.fetchone()
 
-        # cursor.execute(
-        #     "INSERT INTO keys (key_id, key) VALUES (?, ?)",
-        #     (result["id"], new_key),
-        # )
-        # conn.commit()
+        cursor.execute(
+            "INSERT INTO keys (user_id, key, is_login) VALUES (?, ?, ?)",
+            (result["id"], new_key, "N"),
+        )
+        conn.commit()
 
     return new_key
 
@@ -254,14 +256,42 @@ async def get_api_keys(
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT k.key
+            SELECT 
+            k.id, 
+            k.key
             FROM users u
-            JOIN keys k ON u.id = k.key_id
+            JOIN keys k ON u.id = k.user_id
             WHERE u.username = ?
+            AND is_login = 'N'
             """,
             (username,),
         )
         result = cursor.fetchall()
-    keys = ["*" * n + r["key"][n:] for r in result]
+    keys = [
+        {
+            "id": r["id"],
+            "key": "*" * n + r["key"][n:],
+        }
+        for r in result
+    ]
 
     return {"keys": keys}
+
+
+@router.get("/delete-api-key/{id}", dependencies=[Depends(get_api_key)])
+async def delete_api_key(
+    id: str,
+    db: sqlite3.Connection = Depends(get_db),
+):
+    with db as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            DELETE FROM keys
+            WHERE id = ?
+            AND is_login = 'N'
+            """,
+            (id,),
+        )
+        conn.commit()
+    return {"message": "success"}

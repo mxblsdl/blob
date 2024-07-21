@@ -45,9 +45,11 @@ def init_db():
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS keys (
-            key_id INTEGER NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            is_login TEXT,
             key TEXT,
-            FOREIGN KEY (key_id) REFERENCES user(id) ON DELETE CASCADE
+            FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
             )
         """
         )

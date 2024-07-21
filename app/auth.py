@@ -21,7 +21,7 @@ async def get_api_key(
     cur.execute(
         """SELECT u.username
             FROM users u
-            JOIN keys k ON u.id = k.key_id
+            JOIN keys k ON u.id = k.user_id
             WHERE k.key = ?""",
         (api_key_header,),
     )
