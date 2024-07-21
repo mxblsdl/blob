@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.exceptions import HTTPException
 
 from app.dependencies.db import get_db, generate_token
-from app.auth import pwd_context, get_api_key
+from app.dependencies.auth import pwd_context, get_api_key
 
 import sqlite3
 from datetime import datetime
