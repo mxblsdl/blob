@@ -225,12 +225,12 @@ function createLink(file_id) {
   })
     .then((response) => response.json())
     .then((data) => {
-      alertify.success("Link copied to clipboard!");
-      navigator.clipboard.writeText(data.link);
+      copyText(data.link);
     })
     .catch((error) => console.error("error: ", error));
 }
 
+// API Key functions
 const apiButton = document.getElementById("api-key");
 apiButton.addEventListener("click", async () => {
   fetch("/generate-api-key", {
@@ -241,48 +241,85 @@ apiButton.addEventListener("click", async () => {
     },
   })
     .then((response) => response.json())
-    .then((data) =>
-      alertify.alert("Copy API key below, this will not be shown again", data)
-    );
+    .then((data) => {
+      const apiTable = `
+      <table border="1" style="width: 100%; text-align: left;">
+       <thead>
+       </thead>
+       <tbody>
+        <tr>
+        <td>${data}</td>
+        <td><button onclick='copyText("${data}")'>Copy</button></td>
+        </tr>
+        `;
+
+      alertify.alert(
+        "Copy API key below, this will not be shown again",
+        apiTable
+      );
+    });
 });
 
+function copyText(text) {
+  navigator.clipboard.writeText(text);
+  alertify.success("Link copied to clipboard!");
+}
+
+// Manage api keys
 async function manageAPIKeys() {
+  // Create programmatic alerts
+  let apiTableHTML = `
+                <table border="1" style="width: 100%; text-align: left;">
+                    <thead>
+                      <tr>
+                        <th>Key</th>
+                        <th>Remove?</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+  `;
+
   data = await fetch("/get-api-key", {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
       access_token: localStorage.getItem("apikey"),
     },
-  }).then((response) => response.json());
-  return data;
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      data.keys.forEach((key) => {
+        apiTableHTML += `
+    <tr>
+      <td>${key.key}</td>
+      <td><button onclick="removeKey(${key.id})">Remove</button>
+    </tr>
+    `;
+      });
+      apiTableHTML += `
+           </tbody>
+                </table>`;
+
+      alertify.alert("table", apiTableHTML);
+    });
 }
 
 const apiManage = document.getElementById("api-manage");
 apiManage.addEventListener("click", async () => {
-  let apiTableHTML = `
-                <table border="1" style="width: 100%; text-align: left;">
-                    <thead>
-                      <tr>
-                        <th>Key</th>
-                        <th>Remove</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-  `;
-  const data = await manageAPIKeys();
-  data.keys.forEach((key) => {
-    console.log(key);
-    apiTableHTML += `
-    <tr>
-      <td>${key}</td>
-      <td><button onclick="removeKey(${key})">Remove</button>
-    </tr>
-    `;
-  });
-  apiTableHTML += `
-           </tbody>
-                </table>`;
-  console.log(apiTableHTML);
-  alertify.alert("table", apiTableHTML);
+  manageAPIKeys();
 });
-// TODO buid out remove API key endpoint
+
+function removeKey(id) {
+  fetch(`/delete-api-key/${id}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      access_token: localStorage.getItem("apikey"),
+    },
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log(data);
+      manageAPIKeys();
+    });
+}
