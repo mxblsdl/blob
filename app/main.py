@@ -30,11 +30,11 @@ async def on_startup():
     init_db()
 
 
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    return FileResponse("static/favicon.ico")
-
-
 app.include_router(route.router)
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.ico")
