@@ -32,7 +32,7 @@ async def on_startup():
 
 app.include_router(route.router)
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
 
 
 @app.get("/favicon.ico", include_in_schema=False)

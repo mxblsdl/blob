@@ -224,7 +224,6 @@ function createLink(file_id) {
     },
   })
     .then((response) => response.json())
-    .then((data) => console.log(data))
     .then((data) => {
       copyText(data.link);
     })

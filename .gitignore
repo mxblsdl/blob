@@ -8,3 +8,5 @@ data/
 dev.sql
 
 settings.json
+.dockerignore
+certs/

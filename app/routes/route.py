@@ -175,7 +175,20 @@ async def generate_link(
             raise HTTPException(status_code=404, detail="File not found")
 
     # Generate a unique token
-    token = generate_token(file_id)
+    token, expires_at = generate_token()
+    print(token)
+    print(expires_at)
+
+    with db as conn:
+        conn.execute(
+            """
+        INSERT INTO tokens (token, file_id, expires_at)
+        VALUES (?, ?, ?)
+        """,
+            (token, file_id, expires_at),
+        )
+        conn.commit()
+
     link = f"{request.base_url}files/share/{token}"
 
     return {"link": link}

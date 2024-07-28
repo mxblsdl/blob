@@ -65,17 +65,7 @@ def init_db():
         db.commit()
 
 
-def generate_token(file_id: int):
+def generate_token():
     token = secrets.token_urlsafe(16)
     expires_at = datetime.datetime.now() + datetime.timedelta(minutes=TOKEN_EXP_MINUTES)
-
-    with sqlite3.connect("data/file_uploads.db") as conn:
-        conn.execute(
-            """
-        INSERT INTO tokens (token, file_id, expires_at)
-        VALUES (?, ?, ?)
-        """,
-            (token, file_id, expires_at),
-        )
-
-    return token
+    return token, expires_at
