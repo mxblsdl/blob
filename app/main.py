@@ -1,6 +1,4 @@
-from fastapi import (
-    FastAPI,
-)
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -8,9 +6,6 @@ from fastapi.responses import FileResponse
 from app.routes import route
 from app.dependencies.db import init_db
 
-# TODO add dockerfile
-# TODO button to generate API key for user
-# Should also delete API keys or view hashed keys
 
 # Initialize app
 app = FastAPI()

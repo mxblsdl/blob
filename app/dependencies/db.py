@@ -7,7 +7,7 @@ TOKEN_EXP_MINUTES = 30
 
 # Create database connection
 def get_db():
-    db = sqlite3.connect("data/file_uploads.db", check_same_thread=False)
+    db = sqlite3.connect("app/data/file_uploads.db", check_same_thread=False)
     db.row_factory = sqlite3.Row
     # db.set_trace_callback(print)
     try:
@@ -19,7 +19,7 @@ def get_db():
 
 # Initialize the database
 def init_db():
-    with sqlite3.connect("data/file_uploads.db") as db:
+    with sqlite3.connect("app/data/file_uploads.db") as db:
         cur = db.cursor()
         cur.execute(
             """
