@@ -1,10 +1,7 @@
-const register_container = document.getElementById("register-container");
+function showRegister() {
+  document.getElementById("register-container").style["display"] = "block";
+}
 
-const register = document.getElementById("register");
-register.onclick = () => (register_container.style["display"] = "block");
-
-// TODO refactor for consistency?
-// Login
 document
   .getElementById("login-form")
   .addEventListener("submit", async function (event) {
@@ -44,30 +41,30 @@ document
     }
   });
 
-const register_form = document.getElementById("register-form");
-
 // Register
-register_form.addEventListener("submit", async function (event) {
-  event.preventDefault(); // Prevent the form from submitting the default way
+document
+  .getElementById("register-form")
+  .addEventListener("submit", async function (event) {
+    event.preventDefault(); // Prevent the form from submitting the default way
 
-  const username = document.getElementById("register-username").value;
-  const password = document.getElementById("register-password").value;
+    const username = document.getElementById("register-username").value;
+    const password = document.getElementById("register-password").value;
 
-  fetch("/register", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ username, password }),
-  }).then((response) => {
-    if (response.status !== 200) {
-      alertify.error("Registration failed: User already exists");
-    } else {
-      alertify.success("User registered successfully");
-      register_container.style["display"] = "None";
-    }
+    fetch("/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    }).then((response) => {
+      if (response.status !== 200) {
+        alertify.error("Registration failed: User already exists");
+      } else {
+        alertify.success("User registered successfully");
+        register_container.style["display"] = "None";
+      }
+    });
   });
-});
 
 const dropZone = document.getElementById("dropZone");
 // const fileList = document.getElementById("fileList");
@@ -175,6 +172,31 @@ function fetchFilenames() {
     })
     .catch((error) => console.error("Error:", error));
 }
+
+function createFolder() {
+  let filePath = document.getElementById("filePath").innerHTML;
+
+  console.log(filePath);
+}
+// To store a file under a psuedo file path I need to append a folder name to the file
+// I also need to identify that file path when reading file names from DB
+
+// Starting small, lets make a create folder button next to the file path
+
+// function fetchFoldernames() {
+//   const row = document.createElement("tr");
+//         row.innerHTML = `
+//             <td>${file.filename}</td>
+//             <td>${size}</td>
+//             <td>${file.created_at}</td>
+//             <td>
+//                 <a onclick="downloadFile('${file.id}')">Download</a>
+//                 <a onclick="deleteFile('${file.id}')">Delete</a>
+//                 <a onclick="createLink('${file.id}')">Create Link</a>
+//             </td>
+//         `;
+//         fileTableBody.appendChild(row);
+// }
 
 async function downloadFile(file_id) {
   const response = await fetch(`/user/files/${file_id}`, {

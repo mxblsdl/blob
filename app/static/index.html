@@ -23,7 +23,9 @@
 
         <button type="submit">Login</button>
       </form>
-      <button id="register" type="submit">Create New Login</button>
+      <button id="register" type="submit" onclick="showRegister()">
+        Create New Login
+      </button>
     </div>
 
     <div class="login-container" id="register-container">
@@ -56,6 +58,12 @@
       <div id="dropZone">Drop files here</div>
 
       <h2>Uploaded Files</h2>
+      <p>
+        <button onclick="createFolder()">Create folder</button>
+      </p>
+      <p>
+        <code id="filePath">root/</code>
+      </p>
       <table id="fileList">
         <thead>
           <tr>
