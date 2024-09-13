@@ -2,6 +2,15 @@ function showRegister() {
   document.getElementById("register-container").style["display"] = "block";
 }
 
+function hideRegister() {
+  document.getElementById("register-container").style["display"] = "None";
+}
+
+// TODO this needs to get changed... object?
+function getCurrentDir() {
+  return document.getElementById("filePath").innerHTML;
+}
+
 document
   .getElementById("login-form")
   .addEventListener("submit", async function (event) {
@@ -9,6 +18,7 @@ document
 
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
+    const currentDir = getCurrentDir();
 
     try {
       const response = await fetch("/login", {
@@ -35,7 +45,11 @@ document
       document.getElementById(
         "greeting"
       ).innerHTML = `Welcome ${data.username}!`;
-      fetchFilenames();
+
+      // TODO need some fix here for how fetchFolderNames gets called
+      // let folderId = rootFolder();
+      // console.log(folderId)
+      fetchFolderNames();
     } catch (error) {
       alertify.error(`Login failed: ${error.message}`);
     }
@@ -61,13 +75,13 @@ document
         alertify.error("Registration failed: User already exists");
       } else {
         alertify.success("User registered successfully");
-        register_container.style["display"] = "None";
+        hideRegister();
       }
     });
   });
 
 const dropZone = document.getElementById("dropZone");
-// const fileList = document.getElementById("fileList");
+
 const fileTableBody = document.querySelector("#fileList tbody");
 
 // Prevent default behavior for drag-and-drop events
@@ -119,10 +133,12 @@ function handleFiles(files) {
 
 // Upload file to server
 function uploadFile(file) {
+  const currentDir = localStorage.getItem("currentDir")
+
   let formData = new FormData();
   formData.append("file", file);
 
-  fetch(`/upload`, {
+  fetch(`/upload/${currentDir}`, {
     method: "POST",
     body: formData,
     headers: {
@@ -130,73 +146,11 @@ function uploadFile(file) {
     },
   })
     .then((response) => response.json())
-    .then((data) => {
-      console.log(data);
-      fetchFilenames();
+    .then(() => {
+      fetchFolderNames(currentDir);
     })
     .catch((error) => console.error("Error:", error));
 }
-
-// Fetch filenames from server
-function fetchFilenames() {
-  fetch(`/files`, {
-    headers: {
-      access_token: localStorage.getItem("apikey"),
-    },
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      fileTableBody.innerHTML = ""; // Clear the current list
-      data.files.forEach((file) => {
-        if ((file.size > 1000) & (file.size < 9999)) {
-          size = (file.size / 1000).toFixed(1) + " kb";
-        } else if ((file.size > 9999) & (file.size < 9999999)) {
-          size = (file.size / 1000000).toFixed(1) + " Mb";
-        } else {
-          size = file.size + " bytes";
-        }
-
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${file.filename}</td>
-            <td>${size}</td>
-            <td>${file.created_at}</td>
-            <td>
-                <a onclick="downloadFile('${file.id}')">Download</a>
-                <a onclick="deleteFile('${file.id}')">Delete</a>
-                <a onclick="createLink('${file.id}')">Create Link</a>
-            </td>
-        `;
-        fileTableBody.appendChild(row);
-      });
-    })
-    .catch((error) => console.error("Error:", error));
-}
-
-function createFolder() {
-  let filePath = document.getElementById("filePath").innerHTML;
-
-  console.log(filePath);
-}
-// To store a file under a psuedo file path I need to append a folder name to the file
-// I also need to identify that file path when reading file names from DB
-
-// Starting small, lets make a create folder button next to the file path
-
-// function fetchFoldernames() {
-//   const row = document.createElement("tr");
-//         row.innerHTML = `
-//             <td>${file.filename}</td>
-//             <td>${size}</td>
-//             <td>${file.created_at}</td>
-//             <td>
-//                 <a onclick="downloadFile('${file.id}')">Download</a>
-//                 <a onclick="deleteFile('${file.id}')">Delete</a>
-//                 <a onclick="createLink('${file.id}')">Create Link</a>
-//             </td>
-//         `;
-//         fileTableBody.appendChild(row);
-// }
 
 async function downloadFile(file_id) {
   const response = await fetch(`/user/files/${file_id}`, {
@@ -225,6 +179,7 @@ async function downloadFile(file_id) {
 
 // Delete file from server
 function deleteFile(fileId) {
+  const currentDir = localStorage.getItem("currentDir")
   fetch(`/user/files/remove/${fileId}`, {
     method: "DELETE",
     headers: {
@@ -233,13 +188,13 @@ function deleteFile(fileId) {
   })
     .then((response) => response.json())
     .then(() => {
-      fetchFilenames(); // Refresh the file list after deletion
+      fetchFolderNames(currentDir); // Refresh the file list after deletion
     })
     .catch((error) => console.error("Error:", error));
 }
 
 function createLink(file_id) {
-  fetch(`/generateLink/${file_id}`, {
+  fetch(`/user/files/link/${file_id}`, {
     method: "POST",
     headers: {
       access_token: localStorage.getItem("apikey"),
@@ -322,7 +277,7 @@ async function manageAPIKeys() {
            </tbody>
                 </table>`;
 
-      alertify.alert("table", apiTableHTML);
+      alertify.alert("table", apiTableHTML).set({ title: "API Keys" });
     });
 }
 
