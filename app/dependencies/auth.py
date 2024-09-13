@@ -19,7 +19,7 @@ async def get_api_key(
 ) -> str:
     cur = db.cursor()
     cur.execute(
-        """SELECT u.username
+        """SELECT u.id
             FROM users u
             JOIN keys k ON u.id = k.user_id
             WHERE k.key = ?""",
@@ -33,4 +33,4 @@ async def get_api_key(
             detail="Could not validate credentials",
         )
 
-    return key_record["username"]
+    return key_record["id"]
