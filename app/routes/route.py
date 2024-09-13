@@ -3,121 +3,76 @@ from fastapi.responses import StreamingResponse
 from fastapi.exceptions import HTTPException
 
 from app.dependencies.db import get_db, generate_token
-from app.dependencies.auth import pwd_context, get_api_key
+from app.dependencies.auth import get_api_key
+from app.dependencies.models import Folder, FolderId
 
 import sqlite3
 from datetime import datetime
-from pydantic import BaseModel
-import secrets
 import io
-
-
-class LoginData(BaseModel):
-    username: str
-    password: str
 
 
 router = APIRouter()
 
 
-# Routes
-@router.post("/login")
-async def login(login_data: LoginData, db: sqlite3.Connection = Depends(get_db)):
-
-    with db as conn:
-        cursor = conn.execute(
-            """SELECT
-            u.username,
-            u.password,
-            k.key
-            FROM users u
-            JOIN keys k ON u.id = k.user_id
-            WHERE u.username = ?
-            """,
-            (login_data.username,),
-        )
-        user = cursor.fetchone()
-
-    if user is None:
-        raise HTTPException(status_code=401, detail="Invalid username or password")
-
-    if not pwd_context.verify(login_data.password, user[1]):
-        raise HTTPException(status_code=401, detail="Invalid password")
-
-    return {"username": user[0], "password": login_data.password, "apikey": user[2]}
-
-
-@router.post("/register")
-async def register(user_data: LoginData, db: sqlite3.Connection = Depends(get_db)):
-
-    with db as conn:
-        cursor = conn.execute("SELECT username FROM users")
-        users = cursor.fetchall()
-        if any(user_data.username in values for values in users):
-            raise HTTPException(status_code=400, detail="Username already exists")
-        password = pwd_context.hash(user_data.password)
-
-        conn.execute(
-            "INSERT INTO users (username, password) VALUES (?, ?)",
-            (user_data.username, password),
-        )
-        cur = conn.execute(
-            "SELECT id FROM users WHERE username = ?",
-            (user_data.username,),
-        )
-
-        # generate key for general use
-        id = cur.fetchone()
-        key = secrets.token_urlsafe(16)
-        conn.execute(
-            "INSERT INTO keys (user_id, key, is_login) VALUES (?, ?, ?)",
-            (id[0], key, "Y"),
-        )
-
-        return {"message": "User registered successfully"}
-
-
 # Upload functionality
-@router.post("/upload")
+@router.post("/upload/{current_dir}")
 async def upload_file(
-    username=Depends(get_api_key),
+    current_dir: str,
+    user_id=Depends(get_api_key),
     file: UploadFile = File(...),
     db: sqlite3.Connection = Depends(get_db),
 ):
-    try:
-        cursor = db.cursor()
-        file_contents = await file.read()
-        size = len(file_contents)
-        created_at = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    with db as conn:
+        try:
+            file_contents = await file.read()
+            size = len(file_contents)
+            created_at = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
-        cursor.execute(
-            """INSERT OR REPLACE INTO 
-            data (file_name, user, bin, size, created_at) VALUES (?, ?, ?, ?, ?)""",
-            (file.filename, username, file_contents, size, created_at),
-        )
-        db.commit()
+            cursor = conn.execute(
+                """INSERT OR REPLACE INTO 
+                files (user_id, file_name, folder_id, bin, size, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    user_id,  # user_id
+                    file.filename,  # file_name
+                    current_dir,  # folder _id
+                    file_contents,  # bin
+                    size,  # size
+                    created_at,  # created_at
+                ),
+            )
+            db.commit()
 
-        id = cursor.lastrowid
-        return {"file_id": id, "filename": file.filename}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+            id = cursor.lastrowid
+            return {"file_id": id, "filename": file.filename}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/files")
+@router.post("/files")
 async def get_files(
-    username: str = Depends(get_api_key),
+    folderId: FolderId,
+    user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
         cursor = conn.execute(
-            "SELECT id, file_name, size, created_at FROM data WHERE user = ?",
-            (username,),
+            """
+            SELECT 
+            id, 
+            file_name,
+            size, 
+            created_at
+            FROM files
+            WHERE folder_id = ? 
+            AND user_id = ?""",
+            (folderId.id, user_id),
         )
         rows = cursor.fetchall()
         files = [
             {
                 "id": row[0],
-                "filename": row[1],
+                "name": row[1],
                 "size": row[2],
                 "created_at": row[3],
             }
@@ -126,14 +81,88 @@ async def get_files(
     return {"files": files}
 
 
-@router.get("/user/files/{file_id}", dependencies=[Depends(get_api_key)])
+@router.post("/folders")
+async def get_folders(
+    folderId: FolderId,
+    user_id: str = Depends(get_api_key),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    print(folderId)
+    if not folderId.id:
+        with db as conn:
+            cursor = conn.execute(
+                """SELECT id 
+                    FROM folders 
+                    WHERE user_id = ?
+                    AND parent_folder_id IS NULL""",
+                (user_id,),
+            )
+            res = cursor.fetchone()
+
+            if not res:
+                cursor = conn.execute(
+                    """INSERT INTO folders 
+                    (user_id, parent_folder_id, folder_name) VALUES (?, NULL, 'root')
+                    """,
+                    (user_id,),
+                )
+                folderId.id = cursor.lastrowid
+            else:
+                folderId.id = res[0]
+
+    with db as conn:
+        cursor = conn.execute(
+            """
+            SELECT *
+            FROM folders 
+            WHERE user_id = ?
+            AND parent_folder_id = ?""",
+            (user_id, folderId.id),
+        )
+        rows = cursor.fetchall()
+        folders = [
+            {
+                "id": row[0],
+                "user_id": row[2],
+                "parent_id": row[3],
+                "name": row[4],
+            }
+            for row in rows
+        ]
+    return {"folders": folders, "current_folder": folderId.id}
+
+
+@router.post("/add_folder")
+async def add_folder(
+    folder: Folder,
+    username: str = Depends(get_api_key),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    print(folder)
+    with db as conn:
+        conn.execute(
+            "INSERT INTO folders (name, parent, user) VALUES (?, ?, ?)",
+            (folder.new_dir, folder.current_dir, username),
+        )
+    return {"message": f"{folder.new_dir} folder created successfully"}
+
+
+@router.get(
+    "/user/files/{file_id}",
+    dependencies=[Depends(get_api_key)],
+)
 async def get_file(
     file_id: str,
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
         cursor = conn.execute(
-            "SELECT file_name, bin FROM data WHERE id = ?",
+            """
+            SELECT 
+            file_name, 
+            bin 
+            FROM files 
+            WHERE id = ?""",
             (file_id),
         )
         row = cursor.fetchone()
@@ -149,28 +178,40 @@ async def get_file(
         )
 
 
-@router.delete("/user/files/remove/{file_id}", dependencies=[Depends(get_api_key)])
+@router.delete(
+    "/user/files/remove/{file_id}",
+    dependencies=[Depends(get_api_key)],
+)
 async def remove_file(
     file_id: str,
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
         conn.execute(
-            "DELETE FROM data WHERE id = ?",
+            """DELETE FROM files 
+            WHERE id = ?""",
             (file_id,),
         )
         conn.commit()
         return {"message": "File Deleted"}
 
 
-@router.post("/generateLink/{file_id}", dependencies=[Depends(get_api_key)])
+@router.post(
+    "/user/files/link/{file_id}",
+    dependencies=[Depends(get_api_key)],
+)
 async def generate_link(
     request: Request,
     file_id: int,
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
-        cur = conn.execute("SELECT id FROM data WHERE id = ?", (file_id,))
+        cur = conn.execute(
+            """SELECT id 
+                           FROM files 
+                           WHERE id = ?""",
+            (file_id,),
+        )
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="File not found")
 
@@ -203,9 +244,9 @@ async def get_file_by_token(
         cursor = conn.cursor()
         cursor.execute(
             """
-        SELECT d.file_name, d.bin, t.expires_at
-        FROM data d
-        JOIN tokens t ON d.id = t.file_id
+        SELECT f.file_name, f.bin, t.expires_at
+        FROM files f
+        JOIN tokens t ON f.id = t.file_id
         WHERE t.token = ?
         """,
             (token,),
@@ -227,84 +268,13 @@ async def get_file_by_token(
     )
 
 
-# ? Different file
-@router.post("/generate-api-key")
-async def generate_api_key(
-    username: str = Depends(get_api_key),
-    db: sqlite3.Connection = Depends(get_db),
-):
-    new_key = secrets.token_urlsafe(16)
-
-    # return apikey
-    with db as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-        SELECT
-            id
-        FROM
-            users
-        WHERE username = ?;
-        """,
-            (username,),
-        )
-        result = cursor.fetchone()
-
-        cursor.execute(
-            "INSERT INTO keys (user_id, key, is_login) VALUES (?, ?, ?)",
-            (result["id"], new_key, "N"),
-        )
-        conn.commit()
-
-    return new_key
-
-
-@router.get("/get-api-key")
-async def get_api_keys(
-    username: str = Depends(get_api_key),
-    db: sqlite3.Connection = Depends(get_db),
-):
-    n = 15
-    with db as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT 
-            k.id, 
-            k.key
-            FROM users u
-            JOIN keys k ON u.id = k.user_id
-            WHERE u.username = ?
-            AND is_login = 'N'
-            """,
-            (username,),
-        )
-        result = cursor.fetchall()
-    keys = [
-        {
-            "id": r["id"],
-            "key": "*" * n + r["key"][n:],
-        }
-        for r in result
-    ]
-
-    return {"keys": keys}
-
-
-@router.get("/delete-api-key/{id}", dependencies=[Depends(get_api_key)])
-async def delete_api_key(
-    id: str,
-    db: sqlite3.Connection = Depends(get_db),
-):
-    with db as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            DELETE FROM keys
-            WHERE id = ?
-            AND is_login = 'N'
-            """,
-            (id,),
-        )
-        conn.commit()
-    return {"message": "success"}
+# TODO the following is a set of SQL that can be used to populate the file path
+# WITH RECURSIVE directory_path(id, name, path) AS (
+#     SELECT id, name, name AS path FROM directories WHERE id = 1 AND user_id = 1 -- root directory by user 1
+#     UNION ALL
+#     SELECT d.id, d.name, dp.path || '/' || d.name
+#     FROM directories d
+#     JOIN directory_path dp ON dp.id = d.parent_id
+#     WHERE d.user_id = 1
+# )
+# SELECT * FROM directory_path;
