@@ -23,22 +23,37 @@ def init_db():
         cur = db.cursor()
         cur.execute(
             """
-            CREATE TABLE IF NOT EXISTS data (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                file_name TEXT,
-                user TEXT,
-                bin BLOB NOT NULL,
-                size INTEGER,
-                created_at TEXT
+            CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
             )
         """
         )
         cur.execute(
             """
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL,
-                password TEXT NOT NULL
+            CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            file_name TEXT NOT NULL,
+            folder_id INTEGER NOT NULL,
+            bin BLOB NOT NULL,
+            size INTEGER NOT NULL,
+            created_at TEXT,
+            FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOiNCREMENT,
+            user_id INTEGER NOT NULL,
+            parent_folder_id INTEGER,
+            folder_name TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES user(id),
+            FOREIGN KEY (parent_folder_id) REFERENCES folders(id) ON DELETE CASCADE
             )
         """
         )
