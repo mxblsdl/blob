@@ -7,9 +7,9 @@ class LoginData(BaseModel):
 
 
 class Folder(BaseModel):
-    current_dir: str
-    new_dir: str | None
+    currentDir: str
+    newDir: str | None
 
 
 class FolderId(BaseModel):
-    id: int | None = None
+    id: int

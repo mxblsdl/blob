@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.post("/generate-api-key")
 async def generate_api_key(
-    username: str = Depends(get_api_key),
+    user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     new_key = secrets.token_urlsafe(16)
@@ -19,21 +19,10 @@ async def generate_api_key(
     # return apikey
     with db as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            """
-        SELECT
-            id
-        FROM
-            users
-        WHERE username = ?;
-        """,
-            (username,),
-        )
-        result = cursor.fetchone()
 
         cursor.execute(
             "INSERT INTO keys (user_id, key, is_login) VALUES (?, ?, ?)",
-            (result["id"], new_key, "N"),
+            (user_id, new_key, "N"),
         )
         conn.commit()
 
@@ -42,7 +31,7 @@ async def generate_api_key(
 
 @router.get("/get-api-key")
 async def get_api_keys(
-    username: str = Depends(get_api_key),
+    user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     n = 15
@@ -54,11 +43,10 @@ async def get_api_keys(
             k.id, 
             k.key
             FROM users u
-            JOIN keys k ON u.id = k.user_id
-            WHERE u.username = ?
+            JOIN keys k ON ? = k.user_id
             AND is_login = 'N'
             """,
-            (username,),
+            (user_id,),
         )
         result = cursor.fetchall()
     keys = [

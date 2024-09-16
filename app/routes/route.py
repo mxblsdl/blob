@@ -87,29 +87,6 @@ async def get_folders(
     user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
-    print(folderId)
-    if not folderId.id:
-        with db as conn:
-            cursor = conn.execute(
-                """SELECT id 
-                    FROM folders 
-                    WHERE user_id = ?
-                    AND parent_folder_id IS NULL""",
-                (user_id,),
-            )
-            res = cursor.fetchone()
-
-            if not res:
-                cursor = conn.execute(
-                    """INSERT INTO folders 
-                    (user_id, parent_folder_id, folder_name) VALUES (?, NULL, 'root')
-                    """,
-                    (user_id,),
-                )
-                folderId.id = cursor.lastrowid
-            else:
-                folderId.id = res[0]
-
     with db as conn:
         cursor = conn.execute(
             """
@@ -123,35 +100,64 @@ async def get_folders(
         folders = [
             {
                 "id": row[0],
-                "user_id": row[2],
-                "parent_id": row[3],
-                "name": row[4],
+                "user_id": row[1],
+                "parent_id": row[2],
+                "name": row[3],
             }
             for row in rows
         ]
+
+        # Check if in root
+        root, parent_id = in_root(folderId.id, db)
+        if not root:
+            folders.insert(0,
+                {
+                    "id": parent_id,
+                    "user_id": user_id,
+                    "parent_id": parent_id,
+                    "name": "../",
+                }
+            )
+
     return {"folders": folders, "current_folder": folderId.id}
+
+
+def in_root(folder_id: int, db: sqlite3.Connection) -> bool:
+    # I want this to return a tuple with the patent id if False
+    with db as conn:
+        cursor = conn.execute(
+            """SELECT parent_folder_id 
+               FROM folders 
+               WHERE id = ?""",
+            (folder_id,),
+        )
+        res = cursor.fetchone()
+        if res[0] is None:
+            return (True, 0)
+        return (False, res[0])
 
 
 @router.post("/add_folder")
 async def add_folder(
     folder: Folder,
-    username: str = Depends(get_api_key),
+    user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
-    print(folder)
     with db as conn:
         conn.execute(
-            "INSERT INTO folders (name, parent, user) VALUES (?, ?, ?)",
-            (folder.new_dir, folder.current_dir, username),
+            """INSERT INTO folders 
+            (user_id, parent_folder_id, folder_name) 
+            VALUES (?, ?, ?)""",
+            (user_id, folder.currentDir, folder.newDir),
         )
-    return {"message": f"{folder.new_dir} folder created successfully"}
+    return {"message": f"{folder.newDir} folder created successfully"}
 
 
 @router.get(
     "/user/files/{file_id}",
     dependencies=[Depends(get_api_key)],
 )
-async def get_file(
+async def download_file(
     file_id: str,
     db: sqlite3.Connection = Depends(get_db),
 ):
@@ -182,7 +188,7 @@ async def get_file(
     "/user/files/remove/{file_id}",
     dependencies=[Depends(get_api_key)],
 )
-async def remove_file(
+async def delete_file(
     file_id: str,
     db: sqlite3.Connection = Depends(get_db),
 ):
@@ -217,8 +223,6 @@ async def generate_link(
 
     # Generate a unique token
     token, expires_at = generate_token()
-    print(token)
-    print(expires_at)
 
     with db as conn:
         conn.execute(
@@ -268,13 +272,33 @@ async def get_file_by_token(
     )
 
 
-# TODO the following is a set of SQL that can be used to populate the file path
-# WITH RECURSIVE directory_path(id, name, path) AS (
-#     SELECT id, name, name AS path FROM directories WHERE id = 1 AND user_id = 1 -- root directory by user 1
-#     UNION ALL
-#     SELECT d.id, d.name, dp.path || '/' || d.name
-#     FROM directories d
-#     JOIN directory_path dp ON dp.id = d.parent_id
-#     WHERE d.user_id = 1
-# )
-# SELECT * FROM directory_path;
+
+@router.get("/filepath/{folder_id}")
+async def create_file_path(
+    folder_id: int,
+    user_id: str = Depends(get_api_key),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    with db as conn:
+        cur = conn.execute(
+            """
+        WITH RECURSIVE directory_path(id, folder_name, path) AS (
+            SELECT id, folder_name, folder_name AS path 
+            FROM folders 
+            WHERE parent_folder_id IS NULL AND user_id = :user -- root directory by user 1
+            UNION ALL
+            SELECT d.id, d.folder_name, dp.path || '/' || d.folder_name
+            FROM folders d
+            JOIN directory_path dp ON dp.id = d.parent_folder_id
+            WHERE d.user_id = :user
+        )
+        SELECT * FROM directory_path
+        WHERE id = :folder;
+        """,
+            {
+                "user": user_id,
+                "folder": folder_id,
+            },
+        )
+        filepath = cur.fetchone()
+        return filepath[2]
