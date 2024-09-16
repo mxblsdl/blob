@@ -6,11 +6,6 @@ function hideRegister() {
   document.getElementById("register-container").style["display"] = "None";
 }
 
-// TODO this needs to get changed... object?
-function getCurrentDir() {
-  return document.getElementById("filePath").innerHTML;
-}
-
 document
   .getElementById("login-form")
   .addEventListener("submit", async function (event) {
@@ -18,7 +13,6 @@ document
 
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
-    const currentDir = getCurrentDir();
 
     try {
       const response = await fetch("/login", {
@@ -47,9 +41,7 @@ document
       ).innerHTML = `Welcome ${data.username}!`;
 
       // TODO need some fix here for how fetchFolderNames gets called
-      // let folderId = rootFolder();
-      // console.log(folderId)
-      fetchFolderNames();
+      fetchFolderNames(data.folderId);
     } catch (error) {
       alertify.error(`Login failed: ${error.message}`);
     }
@@ -133,7 +125,7 @@ function handleFiles(files) {
 
 // Upload file to server
 function uploadFile(file) {
-  const currentDir = localStorage.getItem("currentDir")
+  const currentDir = localStorage.getItem("currentDir");
 
   let formData = new FormData();
   formData.append("file", file);
@@ -179,7 +171,7 @@ async function downloadFile(file_id) {
 
 // Delete file from server
 function deleteFile(fileId) {
-  const currentDir = localStorage.getItem("currentDir")
+  const currentDir = localStorage.getItem("currentDir");
   fetch(`/user/files/remove/${fileId}`, {
     method: "DELETE",
     headers: {

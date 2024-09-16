@@ -1,23 +1,19 @@
 function createFolder() {
-  let filePath = document.getElementById("filePath");
-  let current_dir = filePath.innerHTML;
+  const currentDir = localStorage.getItem("currentDir");
   alertify
-    .prompt("Enter folder name", "new_folder", function (evt, new_dir) {
-      // I dont want to augment the display unless moving into a file
-      // filePath.innerHTML += "/" + new_dir;
-      // Call fetchFiles from here
+    .prompt("Enter folder name", "new_folder", function (evt, newDir) {
       fetch("/add_folder", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           access_token: localStorage.getItem("apikey"),
         },
-        body: JSON.stringify({ current_dir, new_dir }),
+        body: JSON.stringify({ currentDir, newDir }),
       })
         .then((response) => response.json())
         .then((data) => {
           console.log(data);
-          fetchFolderNames(current_dir);
+          fetchFolderNames(currentDir);
         });
     })
     .set({ title: "New Folder" });
@@ -62,11 +58,6 @@ function fetchFilenames(id) {
 }
 
 function fetchFolderNames(id) {
-  if (typeof id === "undefined") {
-    id = null;
-  }
-  console.log(id)
-  console.log(typeof id)
   fetch("/folders", {
     method: "POST",
     headers: {
@@ -82,18 +73,35 @@ function fetchFolderNames(id) {
         const row = document.createElement("tr");
         row.innerHTML = `
           <td>
-          <a onclick="fetchFolderNames('${folder.name}')">${folder.name}</a>
+          <a onclick="fetchFolderNames('${folder.id}')">${folder.name}</a>
             <img src="folder.png" height="20px" alt="folderImg"></td>
           <td> ~ </td>
           <td> ~ </td>
-          <td>
-              <a onclick="deleteFolder('${folder.id}')">Delete</a>
-          </td>
       `;
+        if (folder.name != "../") {
+          row.innerHTML += `<td>
+              <a onclick="deleteFolder('${folder.id}')">Delete</a>
+          </td>`;
+        }
+
         fileTableBody.appendChild(row);
       });
       fetchFilenames(data.current_folder);
+      createFilePath(data.current_folder);
       localStorage.setItem("currentDir", data.current_folder);
     })
     .catch((error) => console.error("Error:", error));
+}
+
+function createFilePath(id) {
+  fetch(`/filepath/${id}`, {
+    method: "GET",
+    headers: {
+      access_token: localStorage.getItem("apikey"),
+    },
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      document.getElementById("filePath").innerHTML = data;
+    });
 }
