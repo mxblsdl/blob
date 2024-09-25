@@ -14,7 +14,7 @@
   <body>
     <div class="login-container">
       <h2>Login</h2>
-      <form id="login-form">
+      <form id="login-form" onsubmit="login(event)">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required />
 
@@ -30,7 +30,7 @@
 
     <div class="login-container" id="register-container">
       <h2>Register</h2>
-      <form id="register-form">
+      <form id="register-form" onsubmit="register(event)">
         <label for="register-username">Username:</label>
         <input type="text" id="register-username" name="username" required />
 
@@ -50,8 +50,12 @@
         <!-- Insert API Key gen button -->
         <h2 id="greeting"></h2>
         <span>
-          <button id="api-manage">Manage API Keys</button>
-          <button id="api-key">Generate API Key</button>
+          <button id="api-manage" onclick="manageAPIKeys()">
+            Manage API Keys
+          </button>
+          <button id="api-key" onclick="generateAPIKeys()">
+            Generate API Key
+          </button>
         </span>
       </span>
       <h1>Drag and Drop File Upload</h1>
@@ -80,5 +84,7 @@
     </div>
     <script src="script.js"></script>
     <script src="fileSystem.js"></script>
+    <script src="apiKeys.js"></script>
+    <script src="login.js"></script>
   </body>
 </html>
