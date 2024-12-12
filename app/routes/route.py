@@ -49,11 +49,12 @@ async def upload_file(
             raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/files")
-async def get_files(
-    folderId: FolderId,
-    user_id: str = Depends(get_api_key),
-    db: sqlite3.Connection = Depends(get_db),
+# TODO here
+# @router.post("/files")
+def get_files(
+    folderId: int,
+    user_id: str,
+    db: sqlite3.Connection,
 ):
     with db as conn:
         cursor = conn.execute(
@@ -66,19 +67,28 @@ async def get_files(
             FROM files
             WHERE folder_id = ? 
             AND user_id = ?""",
-            (folderId.id, user_id),
+            (folderId, user_id),
         )
         rows = cursor.fetchall()
-        files = [
-            {
-                "id": row[0],
-                "name": row[1],
-                "size": row[2],
-                "created_at": row[3],
-            }
-            for row in rows
-        ]
-    return {"files": files}
+    files = [
+        {
+            "id": row[0],
+            "name": row[1],
+            "size": row[2],
+            "created_at": row[3],
+        }
+        for row in rows
+    ]
+    
+    for file in files:
+        if file["size"] > 1000 and file["size"] < 9999:
+            file["size"] = str(round(file["size"] / 1000, 1)) + "kb"
+        elif file["size"] > 9999 and file["size"] < 9999999:
+            file["size"] = str(round(file["size"] / 1000000, 1)) + "Mb"
+        else:
+            file["size"] = str(file["size"]) + "bytes"
+
+    return files
 
 
 @router.post("/folders")
@@ -110,13 +120,14 @@ async def get_folders(
         # Check if in root
         root, parent_id = in_root(folderId.id, db)
         if not root:
-            folders.insert(0,
+            folders.insert(
+                0,
                 {
                     "id": parent_id,
                     "user_id": user_id,
                     "parent_id": parent_id,
                     "name": "../",
-                }
+                },
             )
 
     return {"folders": folders, "current_folder": folderId.id}
@@ -270,7 +281,6 @@ async def get_file_by_token(
         media_type="application/octet-stream",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
-
 
 
 @router.get("/filepath/{folder_id}")
