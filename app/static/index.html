@@ -6,7 +6,12 @@
     <title>Drag and Drop File Upload</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="table.css" />
-
+    <!-- HTMX -->
+    <script
+      src="https://unpkg.com/htmx.org@2.0.3"
+      integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq"
+      crossorigin="anonymous"
+    ></script>
     <!-- Alertify -->
     <link rel="stylesheet" href="alertify.min.css" />
     <script src="alertify.min.js"></script>
@@ -14,74 +19,36 @@
   <body>
     <div class="login-container">
       <h2>Login</h2>
-      <form id="login-form" onsubmit="login(event)">
+      <form id="login-form">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required />
 
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required />
 
-        <button type="submit">Login</button>
+        <button
+          type="submit"
+          hx-post="/login"
+          hx-target="body"
+          hx-swap="innerHTML"
+        >
+          Login
+        </button>
       </form>
-      <button id="register" type="submit" onclick="showRegister()">
+      <button
+        id="register"
+        hx-target="#register-container"
+        hx-get="/show_register"
+        hx-swap="innerHTML"
+      >
         Create New Login
       </button>
     </div>
 
-    <div class="login-container" id="register-container">
-      <h2>Register</h2>
-      <form id="register-form" onsubmit="register(event)">
-        <label for="register-username">Username:</label>
-        <input type="text" id="register-username" name="username" required />
+    <div id="register-container"></div>
 
-        <label for="register-password">Password:</label>
-        <input
-          type="password"
-          id="register-password"
-          name="password"
-          required
-        />
+    <div id="dropbox-container"></div>
 
-        <button type="submit">Register</button>
-      </form>
-    </div>
-    <div id="dropbox">
-      <span class="header">
-        <!-- Insert API Key gen button -->
-        <h2 id="greeting"></h2>
-        <span>
-          <button id="api-manage" onclick="manageAPIKeys()">
-            Manage API Keys
-          </button>
-          <button id="api-key" onclick="generateAPIKeys()">
-            Generate API Key
-          </button>
-        </span>
-      </span>
-      <h1>Drag and Drop File Upload</h1>
-      <div id="dropZone">Drop files here</div>
-
-      <h2>Uploaded Files</h2>
-      <p>
-        <button onclick="createFolder()">Create folder</button>
-      </p>
-      <p>
-        <code id="filePath"></code>
-      </p>
-      <table id="fileList">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Size</th>
-            <th>Created At</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Table rows will be inserted here by JavaScript -->
-        </tbody>
-      </table>
-    </div>
     <script src="script.js"></script>
     <script src="fileSystem.js"></script>
     <script src="apiKeys.js"></script>

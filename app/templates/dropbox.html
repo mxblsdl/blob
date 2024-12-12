@@ -1,0 +1,45 @@
+<script>
+  localStorage.setItem("apikey", "{{ key }}");
+</script>
+<span class="header">
+  <!-- Insert API Key gen button -->
+  <h2 id="greeting">Welcome {{ username }}</h2>
+  <span>
+    <button id="api-manage" onclick="manageAPIKeys()">Manage API Keys</button>
+    <button id="api-key" onclick="generateAPIKeys()">Generate API Key</button>
+  </span>
+</span>
+<h1>Drag and Drop File Upload</h1>
+<div id="dropZone">Drop files here</div>
+
+<h2>Uploaded Files</h2>
+<p>
+  <button onclick="createFolder()">Create folder</button>
+</p>
+<p>
+  <code id="filePath"></code>
+</p>
+<table id="fileList">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Size</th>
+      <th>Created At</th>
+      <th>Actions</th>
+    </tr>
+    {% for item in items %}
+    <td>{{item.name}}</td>
+    <td>{{item.size}}</td>
+    <td>{{item.created_at}}</td>
+    <td>
+      <!-- TODO replace with HTMX -->
+      <a onclick="downloadFile('${item.id}')">Download</a>
+      <a onclick="deleteFile('${item.id}')">Delete</a>
+      <a onclick="createLink('${item.id}')">Create Link</a>
+    </td>
+    {% endfor %}
+  </thead>
+  <tbody>
+    <!-- Table rows will be inserted here by JavaScript -->
+  </tbody>
+</table>
