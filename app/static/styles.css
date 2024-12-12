@@ -21,9 +21,6 @@
 .btn {
   margin-left: 1rem;
 }
-#dropbox {
-  display: none;
-}
 
 .login-container {
   background-color: #ffffff;
@@ -72,9 +69,6 @@
 
 .login-container button:hover {
   background-color: #45a049;
-}
-#register-container {
-  display: none;
 }
 
 .header {
