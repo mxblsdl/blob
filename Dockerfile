@@ -19,7 +19,7 @@ COPY certs /app/certs
 EXPOSE 80
 
 # Install git for development
-RUN apt update && apt install -y git
+# RUN apt update && apt install -y git
 
 # Run the FastAPI app with Uvicorn
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--ssl-keyfile", "/app/certs/privkey.pem", "--ssl-certfile", "/app/certs/fullchain.pem"]
