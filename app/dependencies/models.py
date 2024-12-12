@@ -1,9 +1,9 @@
 from pydantic import BaseModel
 
 
-class LoginData(BaseModel):
-    username: str
-    password: str
+# class LoginData(BaseModel):
+#     username: str
+#     password: str
 
 
 class Folder(BaseModel):
