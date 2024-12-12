@@ -31,7 +31,6 @@ function fetchFilenames(id) {
   })
     .then((response) => response.json())
     .then((data) => {
-      // fileTableBody.innerHTML = ""; // Clear the current list
       data.files.forEach((file) => {
         if ((file.size > 1000) & (file.size < 9999)) {
           size = (file.size / 1000).toFixed(1) + " kb";
