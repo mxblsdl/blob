@@ -12,14 +12,9 @@ import secrets
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
-# TODO remove register after success
-# TODO jinja template index file
-# TODO split up template for different parts of app
-# TODO tailwind?
-
 
 # Routes
-@router.post("/login")
+@router.post("/login", response_class=HTMLResponse)
 async def login(
     request: Request,
     username: str = Form(...),
@@ -39,17 +34,23 @@ async def login(
             """,
             (username,),
         )
-        id, user, user_password, key = cursor.fetchone()
+        try:
+            id, user, user_password, key = cursor.fetchone()
+        except Exception as e:
+            print(e)
+            return HTMLResponse(
+                content="", status_code=404, headers={"HX-Trigger": "user-not-found"}
+            )
 
-    if user is None:
-        # TODO return failure
-        raise HTTPException(status_code=401, detail="Invalid username or password")
 
     if not pwd_context.verify(password, user_password):
-        raise HTTPException(status_code=401, detail="Invalid password")
+        return HTMLResponse(
+                content="", status_code=404, headers={"HX-Trigger": "password-incorrect"}
+            )
     folder_id = check_root(id, db)
 
     items = get_files(folder_id, user_id=id, db=db)
+    print(items)
 
     return templates.TemplateResponse(
         "dropbox.html",
@@ -126,11 +127,22 @@ async def register(
     result = check_existing_user(username, password, db)
     print(result)
     if result:
-        return templates.TemplateResponse("register-success.html", {"request": request})
+        return templates.TemplateResponse(
+            "alert.html",
+            {
+                "request": request,
+                "message": "User registered successfully",
+                "type": "success",
+            },
+        )
 
     return templates.TemplateResponse(
-        "register-fail.html",
-        {"request": request, "message": "Registration failed: User already exists"},
+        "register.html",
+        {
+            "request": request,
+            "message": "Registration failed: User already exists",
+            "type": "error",
+        },
     )
 
 
