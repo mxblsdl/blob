@@ -1,0 +1,11 @@
+{% if type == 'success' %}
+<script>
+  alertify.success("{{ message }}");
+</script>
+{% endif %}
+
+{% if type == 'error' %}
+<script>
+  alertify.error("{{ message }}");
+</script>
+{% endif %}
