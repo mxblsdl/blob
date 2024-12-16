@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, Request, Form
-from fastapi.exceptions import HTTPException
+
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.db import get_db
 from app.dependencies.auth import pwd_context
-from app.routes.route import get_files
 import sqlite3
 import secrets
 
@@ -42,23 +41,20 @@ async def login(
                 content="", status_code=404, headers={"HX-Trigger": "user-not-found"}
             )
 
-
     if not pwd_context.verify(password, user_password):
         return HTMLResponse(
-                content="", status_code=404, headers={"HX-Trigger": "password-incorrect"}
-            )
+            content="", status_code=404, headers={"HX-Trigger": "password-incorrect"}
+        )
     folder_id = check_root(id, db)
 
-    items = get_files(folder_id, user_id=id, db=db)
-    print(items)
-
+    # So the response sends the folder_id and the user_id and maybe the api key
     return templates.TemplateResponse(
         "dropbox.html",
-        {
+        context={
             "request": request,
             "username": username,
             "key": key,
-            "items": items,
+            "folder_id": folder_id,
         },
     )
 
