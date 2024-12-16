@@ -1,6 +1,8 @@
 <script>
   localStorage.setItem("apikey", "{{ key }}");
 </script>
+<link rel="stylesheet" href="table.css" />
+
 <span class="header">
   <!-- Insert API Key gen button -->
   <h2 id="greeting">Welcome {{ username }}</h2>
@@ -17,29 +19,32 @@
   <button onclick="createFolder()">Create folder</button>
 </p>
 <p>
-  <code id="filePath"></code>
+  <code
+    id="filePath"
+    hx-get="/filepath"
+    hx-target="#filePath"
+    hx-trigger="htmx:afterSettle from:body delay:600ms once"
+    hx-swap="innerHTML"
+    hx-headers='"access_token" : "{{ key }}"'
+    hx-vals=' "folder_id": "{{folder_id}}" '
+  ></code>
 </p>
-<table id="fileList">
-  <thead>
+<div
+  hx-get="/items"
+  hx-trigger="htmx:afterSettle from:body delay:500ms once"
+  hx-swap="innerHTML"
+  hx-target="#fileTable"
+  hx-headers='"access_token" : "{{ key }}"'
+  hx-vals=' "folder_id": "{{folder_id}}" '
+></div>
+<table>
+  <thead class="">
     <tr>
       <th>Name</th>
       <th>Size</th>
       <th>Created At</th>
       <th>Actions</th>
     </tr>
-    {% for item in items %}
-    <td>{{item.name}}</td>
-    <td>{{item.size}}</td>
-    <td>{{item.created_at}}</td>
-    <td>
-      <!-- TODO replace with HTMX -->
-      <a onclick="downloadFile('{{ item.id }}')">Download</a>
-      <a onclick="deleteFile('{{ item.id }}')">Delete</a>
-      <a onclick="createLink('{{ item.id }}')">Create Link</a>
-    </td>
-    {% endfor %}
   </thead>
-  <tbody>
-    <!-- Table rows will be inserted here by JavaScript -->
-  </tbody>
+  <tbody id="fileTable" class="items"></tbody>
 </table>

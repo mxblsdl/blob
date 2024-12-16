@@ -1,0 +1,28 @@
+{% for folder in folders %}
+<tr>
+  <td>
+    <!-- TODO replace with HTMX -->
+    <a onclick="fetchFolderNames('{{ folder.id }}')">{{ folder.name }}</a>
+    <img src="folder.png" height="20px" alt="folderImg" />
+  </td>
+  <td>~</td>
+  <td>~</td>
+  {% if folder.name != "../" %}
+  <td>
+    <a onclick="deleteFolder('{{ folder.id }}')">Delete</a>
+  </td>
+  {% endif %}
+</tr>
+{% endfor %} {% for file in files %}
+<tr>
+  <td>{{ file.name }}</td>
+  <td>{{ file.size }}</td>
+  <td>{{ file.created_at }}</td>
+  <td>
+    <!-- TODO replace with HTMX -->
+    <a onclick="downloadFile('{{ file.id }}')">Download</a>
+    <a onclick="deleteFile('{{ file.id }}')">Delete</a>
+    <a onclick="createLink('{{ file.id }}')">Create Link</a>
+  </td>
+</tr>
+{% endfor %}
