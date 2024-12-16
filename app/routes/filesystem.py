@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, UploadFile, File, Request, Query
+from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.exceptions import HTTPException
+from fastapi.templating import Jinja2Templates
 
 from app.dependencies.db import get_db, generate_token
 from app.dependencies.auth import get_api_key
-from app.dependencies.models import Folder, FolderId
+from app.dependencies.models import Folder
 
 import sqlite3
 from datetime import datetime
@@ -12,6 +13,7 @@ import io
 
 
 router = APIRouter()
+templates = Jinja2Templates(directory="app/templates")
 
 
 # Upload functionality
@@ -49,10 +51,28 @@ async def upload_file(
             raise HTTPException(status_code=500, detail=str(e))
 
 
-# TODO here
-# @router.post("/files")
-def get_files(
-    folderId: int,
+@router.get("/items", response_class=HTMLResponse)
+async def populate_items(
+    request: Request,
+    folder_id=Query(...),
+    user_id=Depends(get_api_key),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    files = await get_files(folder_id, user_id, db)
+    folders = await get_folders(folder_id, user_id, db)
+
+    return templates.TemplateResponse(
+        "table.html",
+        context={
+            "request": request,
+            "folders": folders,
+            "files": files,
+        },
+    )
+
+
+async def get_files(
+    folder_id: int,
     user_id: str,
     db: sqlite3.Connection,
 ):
@@ -67,7 +87,7 @@ def get_files(
             FROM files
             WHERE folder_id = ? 
             AND user_id = ?""",
-            (folderId, user_id),
+            (folder_id, user_id),
         )
         rows = cursor.fetchall()
     files = [
@@ -79,7 +99,7 @@ def get_files(
         }
         for row in rows
     ]
-    
+
     for file in files:
         if file["size"] > 1000 and file["size"] < 9999:
             file["size"] = str(round(file["size"] / 1000, 1)) + "kb"
@@ -91,11 +111,10 @@ def get_files(
     return files
 
 
-@router.post("/folders")
 async def get_folders(
-    folderId: FolderId,
-    user_id: str = Depends(get_api_key),
-    db: sqlite3.Connection = Depends(get_db),
+    folder_id: int,
+    user_id: str,
+    db: sqlite3.Connection,
 ):
     with db as conn:
         cursor = conn.execute(
@@ -104,7 +123,7 @@ async def get_folders(
             FROM folders 
             WHERE user_id = ?
             AND parent_folder_id = ?""",
-            (user_id, folderId.id),
+            (user_id, folder_id),
         )
         rows = cursor.fetchall()
         folders = [
@@ -118,7 +137,7 @@ async def get_folders(
         ]
 
         # Check if in root
-        root, parent_id = in_root(folderId.id, db)
+        root, parent_id = in_root(folder_id, db)
         if not root:
             folders.insert(
                 0,
@@ -130,7 +149,7 @@ async def get_folders(
                 },
             )
 
-    return {"folders": folders, "current_folder": folderId.id}
+    return folders
 
 
 def in_root(folder_id: int, db: sqlite3.Connection) -> bool:
@@ -283,9 +302,9 @@ async def get_file_by_token(
     )
 
 
-@router.get("/filepath/{folder_id}")
+@router.get("/filepath", response_class=HTMLResponse)
 async def create_file_path(
-    folder_id: int,
+    folder_id: int = Query(...),
     user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
@@ -311,4 +330,7 @@ async def create_file_path(
             },
         )
         filepath = cur.fetchone()
+        for f in filepath:
+            print(f)
+        # print(filepath)
         return filepath[2]
