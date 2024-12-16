@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Drag and Drop File Upload</title>
     <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="table.css" />
     <!-- HTMX -->
     <script
       src="https://unpkg.com/htmx.org@2.0.3"
@@ -52,10 +51,10 @@
 
     <div id="dropbox-container"></div>
 
-    <script src="script.js"></script>
-    <script src="fileSystem.js"></script>
-    <script src="apiKeys.js"></script>
-    <script src="login.js"></script>
+    <script src="js/script.js"></script>
+    <script src="js/fileSystem.js"></script>
+    <script src="js/apiKeys.js"></script>
+    <script src="js/login.js"></script>
     <script>
       document.body.addEventListener("user-not-found", function (evt) {
         alertify.error("User not found!");
