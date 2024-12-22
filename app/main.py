@@ -6,8 +6,6 @@ from fastapi.responses import FileResponse
 from app.routes import filesystem, login, api_key
 from app.dependencies.db import init_db
 
-# TODO split routes into more files
-# TODO split JS into more files
 
 # Initialize app
 app = FastAPI()

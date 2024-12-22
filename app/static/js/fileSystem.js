@@ -92,15 +92,15 @@ function fetchFolderNames(id) {
     .catch((error) => console.error("Error:", error));
 }
 
-function createFilePath(id) {
-  fetch(`/filepath/${id}`, {
-    method: "GET",
-    headers: {
-      access_token: localStorage.getItem("apikey"),
-    },
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      document.getElementById("filePath").innerHTML = data;
-    });
-}
+// function createFilePath(id) {
+//   fetch(`/filepath/${id}`, {
+//     method: "GET",
+//     headers: {
+//       access_token: localStorage.getItem("apikey"),
+//     },
+//   })
+//     .then((response) => response.json())
+//     .then((data) => {
+//       document.getElementById("filePath").innerHTML = data;
+//     });
+// }

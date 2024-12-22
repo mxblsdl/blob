@@ -1,75 +1,57 @@
 // Upload files
-const dropZone = document.getElementById("dropZone");
+// const dropZone = document.getElementById("dropZone");
 
-const fileTableBody = document.querySelector("#fileList tbody");
+// const fileTableBody = document.querySelector("#fileList tbody");
 
 // Prevent default behavior for drag-and-drop events
-["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
-  dropZone.addEventListener(eventName, preventDefaults, false);
-  document.body.addEventListener(eventName, preventDefaults, false);
-});
+// ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+//   dropZone.addEventListener(eventName, preventDefaults, false);
+//   document.body.addEventListener(eventName, preventDefaults, false);
+// });
 
-function preventDefaults(e) {
-  e.preventDefault();
-  e.stopPropagation();
-}
+// function preventDefaults(e) {
+//   e.preventDefault();
+//   e.stopPropagation();
+// }
 
 // Highlight drop zone when file is dragged over
-["dragenter", "dragover"].forEach((eventName) => {
-  dropZone.addEventListener(
-    eventName,
-    () => {
-      dropZone.classList.add("highlight");
-    },
-    false
-  );
-});
 
-["dragleave", "drop"].forEach((eventName) => {
-  dropZone.addEventListener(
-    eventName,
-    () => {
-      dropZone.classList.remove("highlight");
-    },
-    false
-  );
-});
 
 // Handle dropped files
-dropZone.addEventListener("drop", handleDrop, false);
+// dropZone.addEventListener("drop", handleDrop, false);
 
-function handleDrop(e) {
-  let dt = e.dataTransfer;
-  let files = dt.files;
+// function handleDrop(e) {
+//   let dt = e.dataTransfer;
+//   let files = dt.files;
 
-  handleFiles(files);
-}
+//   handleFiles(files);
+// }
 
-// Handle uploaded files
-function handleFiles(files) {
-  [...files].forEach(uploadFile);
-}
+// // Handle uploaded files
+// function handleFiles(files) {
+//   [...files].forEach(uploadFile);
+// }
 
 // Upload file to server
-function uploadFile(file) {
-  const currentDir = localStorage.getItem("currentDir");
+// function uploadFile(file) {
+//   const currentDir = localStorage.getItem("currentDir");
 
-  let formData = new FormData();
-  formData.append("file", file);
+//   let formData = new FormData();
+//   formData.append("file", file);
 
-  fetch(`/upload/${currentDir}`, {
-    method: "POST",
-    body: formData,
-    headers: {
-      access_token: localStorage.getItem("apikey"),
-    },
-  })
-    .then((response) => response.json())
-    .then(() => {
-      fetchFolderNames(currentDir);
-    })
-    .catch((error) => console.error("Error:", error));
-}
+//   fetch(`/upload/${currentDir}`, {
+//     method: "POST",
+//     body: formData,
+//     headers: {
+//       access_token: localStorage.getItem("apikey"),
+//     },
+//   })
+//     .then((response) => response.json())
+//     .then(() => {
+//       fetchFolderNames(currentDir);
+//     })
+//     .catch((error) => console.error("Error:", error));
+// }
 
 async function downloadFile(file_id) {
   const response = await fetch(`/user/files/${file_id}`, {

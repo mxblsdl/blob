@@ -6,28 +6,28 @@
 //   document.getElementById("register-container").style["display"] = "None";
 // }
 
-async function login(event) {
-  event.preventDefault(); // Prevent the form from submitting the default way
+// async function login(event) {
+//   event.preventDefault(); // Prevent the form from submitting the default way
 
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-  console.log(username)
+//   const username = document.getElementById("username").value;
+//   const password = document.getElementById("password").value;
+//   console.log(username)
 
-  try {
-    const response = await fetch("/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username, password }),
-    });
+//   try {
+//     const response = await fetch("/login", {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify({ username, password }),
+//     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.log(errorData)
-      throw new Error(errorData.detail);
-    }
-    const data = await response.json();
+//     if (!response.ok) {
+//       const errorData = await response.json();
+//       console.log(errorData)
+//       throw new Error(errorData.detail);
+//     }
+//     const data = await response.json();
 
     // localStorage.setItem("apikey", data.apikey);
 
@@ -38,11 +38,11 @@ async function login(event) {
     // });
     // document.getElementById("greeting").innerHTML = `Welcome ${data.username}!`;
 
-    fetchFolderNames(data.folderId);
-  } catch (error) {
-    alertify.error(`Login failed: ${error.message}`);
-  }
-}
+//     fetchFolderNames(data.folderId);
+//   } catch (error) {
+//     alertify.error(`Login failed: ${error.message}`);
+//   }
+// }
 
 // Register
 // async function register(event) {
