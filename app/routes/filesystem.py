@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Request, Query
+from fastapi import APIRouter, Depends, UploadFile, File, Request, Query, Form
 from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.exceptions import HTTPException
 from fastapi.templating import Jinja2Templates
@@ -17,13 +17,17 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 # Upload functionality
-@router.post("/upload/{current_dir}")
+@router.post("/upload")
 async def upload_file(
-    current_dir: str,
+    request: Request,
+    folder_id: str = Form(...),
     user_id=Depends(get_api_key),
     file: UploadFile = File(...),
     db: sqlite3.Connection = Depends(get_db),
 ):
+    # data= await request.json()
+    # print(folder_id)
+    print("works")
     with db as conn:
         try:
             file_contents = await file.read()
@@ -37,7 +41,7 @@ async def upload_file(
                 (
                     user_id,  # user_id
                     file.filename,  # file_name
-                    current_dir,  # folder _id
+                    folder_id,  # folder _id
                     file_contents,  # bin
                     size,  # size
                     created_at,  # created_at
@@ -330,7 +334,5 @@ async def create_file_path(
             },
         )
         filepath = cur.fetchone()
-        for f in filepath:
-            print(f)
-        # print(filepath)
+
         return filepath[2]
