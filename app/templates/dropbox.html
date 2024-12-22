@@ -1,8 +1,13 @@
 <script>
   localStorage.setItem("apikey", "{{ key }}");
 </script>
+<script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/include-vals.js"></script>
 <link rel="stylesheet" href="table.css" />
-
+<style>
+  .highlight {
+    background-color: rgb(202, 199, 206);
+  }
+</style>
 <span class="header">
   <!-- Insert API Key gen button -->
   <h2 id="greeting">Welcome {{ username }}</h2>
@@ -12,33 +17,39 @@
   </span>
 </span>
 <h1>Drag and Drop File Upload</h1>
-<div id="dropZone">Drop files here</div>
+
+<form id="dropZone" hx-headers='{"access_token":"{{ key }}"}'>
+  Drop files here
+</form>
 
 <h2>Uploaded Files</h2>
 <p>
   <button onclick="createFolder()">Create folder</button>
 </p>
-<p>
+<!-- Using hidden input to store folder_id value -->
+<!-- TODO I want to turn this into a HTMX trigger -->
+<input type="hidden" id="folderId" name="folder_id" value="{{folder_id}}" />
+<form>
   <code
     id="filePath"
     hx-get="/filepath"
     hx-target="#filePath"
-    hx-trigger="htmx:afterSettle from:body delay:600ms once"
+    hx-trigger="load"
     hx-swap="innerHTML"
     hx-headers='"access_token" : "{{ key }}"'
-    hx-vals=' "folder_id": "{{folder_id}}" '
+    hx-include="#folderId"
   ></code>
-</p>
+</form>
 <div
   hx-get="/items"
-  hx-trigger="htmx:afterSettle from:body delay:500ms once"
+  hx-trigger="load, triggerItems from:body"
   hx-swap="innerHTML"
   hx-target="#fileTable"
   hx-headers='"access_token" : "{{ key }}"'
-  hx-vals=' "folder_id": "{{folder_id}}" '
+  hx-include="#folderId"
 ></div>
 <table>
-  <thead class="">
+  <thead>
     <tr>
       <th>Name</th>
       <th>Size</th>
@@ -48,3 +59,67 @@
   </thead>
   <tbody id="fileTable" class="items"></tbody>
 </table>
+<script>
+  //can I use the HTMX js here?
+  const dropZone = document.getElementById("dropZone");
+
+  ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    dropZone.addEventListener(
+      eventName,
+      () => {
+        dropZone.classList.add("highlight");
+      },
+      false
+    );
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    dropZone.addEventListener(
+      eventName,
+      () => {
+        dropZone.classList.remove("highlight");
+      },
+      false
+    );
+  });
+
+  dropZone.addEventListener("drop", async (e) => {
+    const files = e.dataTransfer.files;
+    const folder = document.getElementById("folderId").value;
+
+    const formData = new FormData();
+
+    // Add the file to FormData
+    formData.append("file", files[0]);
+
+    // Add additional form data
+    formData.append("folder_id", folder);
+    const headers = JSON.parse(dropZone.getAttribute("hx-headers"));
+
+    const response = await fetch("/upload", {
+      method: "POST",
+      body: formData,
+      headers: {
+        ...headers,
+        "HX-Request": "true",
+        "HX-Trigger": "dropZone",
+      },
+    });
+    if (response.ok) {
+      htmx.trigger(document.body, "triggerItems");
+      alertify.success("File Upload Successful");
+    } else {
+      alertify.error("Upload Failed");
+    }
+  });
+</script>
