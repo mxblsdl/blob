@@ -1,5 +1,5 @@
 <script>
-  localStorage.setItem("apikey", "{{ key }}");
+  //  localStorage.setItem("apikey", "{{ key }}");
 </script>
 <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/include-vals.js"></script>
 <link rel="stylesheet" href="table.css" />
@@ -8,6 +8,9 @@
     background-color: rgb(202, 199, 206);
   }
 </style>
+<!-- Store API key information and attach to all requests -->
+<input id="key" type="hidden" name="api-key" value="{{ key }}" />
+
 <span class="header">
   <!-- Insert API Key gen button -->
   <h2 id="greeting">Welcome {{ username }}</h2>
@@ -28,7 +31,7 @@
 </p>
 <!-- Using hidden input to store folder_id value -->
 <!-- TODO I want to turn this into a HTMX trigger -->
-<input type="hidden" id="folderId" name="folder_id" value="{{folder_id}}" />
+<input type="hidden" id="folderId" name="folder_id" value="{{ folder_id }}" />
 <form>
   <code
     id="filePath"
@@ -36,18 +39,9 @@
     hx-target="#filePath"
     hx-trigger="load"
     hx-swap="innerHTML"
-    hx-headers='"access_token" : "{{ key }}"'
     hx-include="#folderId"
   ></code>
 </form>
-<div
-  hx-get="/items"
-  hx-trigger="load, triggerItems from:body"
-  hx-swap="innerHTML"
-  hx-target="#fileTable"
-  hx-headers='"access_token" : "{{ key }}"'
-  hx-include="#folderId"
-></div>
 <table>
   <thead>
     <tr>
@@ -57,7 +51,14 @@
       <th>Actions</th>
     </tr>
   </thead>
-  <tbody id="fileTable" class="items"></tbody>
+  <tbody
+    id="fileTable"
+    class="items"
+    hx-get="/items"
+    hx-trigger="load, triggerItems from:body"
+    hx-swap="innerHTML"
+    hx-include="#folderId"
+  ></tbody>
 </table>
 <script>
   //can I use the HTMX js here?
@@ -104,22 +105,29 @@
 
     // Add additional form data
     formData.append("folder_id", folder);
-    const headers = JSON.parse(dropZone.getAttribute("hx-headers"));
+    const apiKey = document.querySelector("#key").value;
 
+    // Form data needs a JS method to attach the data
     const response = await fetch("/upload", {
       method: "POST",
       body: formData,
       headers: {
-        ...headers,
-        "HX-Request": "true",
-        "HX-Trigger": "dropZone",
+        access_token: apiKey,
+        //"HX-Trigger": "dropZone",
       },
     });
     if (response.ok) {
-      htmx.trigger(document.body, "triggerItems");
+      // triggers the update
+      htmx.trigger("#fileTable", "triggerItems");
       alertify.success("File Upload Successful");
     } else {
       alertify.error("Upload Failed");
     }
+  });
+
+  // Adds api key header to all requests
+  document.body.addEventListener("htmx:configRequest", (e) => {
+    const apiKey = document.querySelector("#key").getAttribute("value");
+    e.detail.headers["access_token"] = apiKey;
   });
 </script>

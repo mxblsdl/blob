@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Request, Query, Form
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
 from fastapi.exceptions import HTTPException
 from fastapi.templating import Jinja2Templates
 
@@ -21,20 +21,17 @@ templates = Jinja2Templates(directory="app/templates")
 async def upload_file(
     request: Request,
     folder_id: str = Form(...),
-    user_id=Depends(get_api_key),
+    user_id: str = Depends(get_api_key),
     file: UploadFile = File(...),
     db: sqlite3.Connection = Depends(get_db),
 ):
-    # data= await request.json()
-    # print(folder_id)
-    print("works")
     with db as conn:
         try:
             file_contents = await file.read()
             size = len(file_contents)
             created_at = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
-            cursor = conn.execute(
+            conn.execute(
                 """INSERT OR REPLACE INTO 
                 files (user_id, file_name, folder_id, bin, size, created_at) 
                 VALUES (?, ?, ?, ?, ?, ?)""",
@@ -48,9 +45,9 @@ async def upload_file(
                 ),
             )
             db.commit()
-
-            id = cursor.lastrowid
-            return {"file_id": id, "filename": file.filename}
+            return JSONResponse(
+                status_code=200, content={"message": "File Upload Successful"}
+            )
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -105,10 +102,10 @@ async def get_files(
     ]
 
     for file in files:
-        if file["size"] > 1000 and file["size"] < 9999:
-            file["size"] = str(round(file["size"] / 1000, 1)) + "kb"
-        elif file["size"] > 9999 and file["size"] < 9999999:
-            file["size"] = str(round(file["size"] / 1000000, 1)) + "Mb"
+        if 1000 < file["size"] <= 999999:
+            file["size"] = str(round(file["size"] / 1000, 1)) + "KB"
+        elif file["size"] > 9999 and file["size"] < 999999999:
+            file["size"] = str(round(file["size"] / 1000000, 1)) + "MB"
         else:
             file["size"] = str(file["size"]) + "bytes"
 
@@ -187,12 +184,10 @@ async def add_folder(
     return {"message": f"{folder.newDir} folder created successfully"}
 
 
-@router.get(
-    "/user/files/{file_id}",
-    dependencies=[Depends(get_api_key)],
-)
+@router.get("/download/{file_id}")
 async def download_file(
     file_id: str,
+    user_id=Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
@@ -202,14 +197,18 @@ async def download_file(
             file_name, 
             bin 
             FROM files 
-            WHERE id = ?""",
-            (file_id),
+            WHERE id = ?
+            AND user_id = ?
+            """,
+            (file_id, user_id),
         )
         row = cursor.fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="File not found")
 
         filename, content = row
+
+        print(file_id)
 
         return StreamingResponse(
             content=io.BytesIO(content),
@@ -218,22 +217,21 @@ async def download_file(
         )
 
 
-@router.delete(
-    "/user/files/remove/{file_id}",
-    dependencies=[Depends(get_api_key)],
-)
+@router.delete("/delete", response_class=HTMLResponse)
 async def delete_file(
-    file_id: str,
+    file_id: str = Query(...),
+    user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
         conn.execute(
             """DELETE FROM files 
-            WHERE id = ?""",
-            (file_id,),
+            WHERE id = ?
+            AND user_id = ?""",
+            (file_id, user_id),
         )
         conn.commit()
-        return {"message": "File Deleted"}
+    return HTMLResponse("File Deleted")
 
 
 @router.post(

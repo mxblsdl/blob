@@ -53,46 +53,23 @@
 //     .catch((error) => console.error("Error:", error));
 // }
 
-async function downloadFile(file_id) {
-  const response = await fetch(`/user/files/${file_id}`, {
-    method: "GET",
-    headers: {
-      access_token: localStorage.getItem("apikey"),
-    },
-  }).catch((error) => console.error("Error:", error));
 
-  const disposition = response.headers.get("Content-Disposition");
-  const filename = disposition.match(/filename="?([^"]*)"?/)[1];
-
-  // Create a Blob from the response
-  const blob = await response.blob();
-
-  // Create a link element, set the download attribute and click it
-  const link = document.createElement("a");
-  const objectURL = URL.createObjectURL(blob);
-  link.href = objectURL;
-  link.download = filename; // Set the filename here
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(objectURL); // Clean up
-}
 
 // Delete file from server
-function deleteFile(fileId) {
-  const currentDir = localStorage.getItem("currentDir");
-  fetch(`/user/files/remove/${fileId}`, {
-    method: "DELETE",
-    headers: {
-      access_token: localStorage.getItem("apikey"),
-    },
-  })
-    .then((response) => response.json())
-    .then(() => {
-      fetchFolderNames(currentDir); // Refresh the file list after deletion
-    })
-    .catch((error) => console.error("Error:", error));
-}
+// function deleteFile(fileId) {
+//   const currentDir = localStorage.getItem("currentDir");
+//   fetch(`/user/files/remove/${fileId}`, {
+//     method: "DELETE",
+//     headers: {
+//       access_token: localStorage.getItem("apikey"),
+//     },
+//   })
+//     .then((response) => response.json())
+//     .then(() => {
+//       fetchFolderNames(currentDir); // Refresh the file list after deletion
+//     })
+//     .catch((error) => console.error("Error:", error));
+// }
 
 function createLink(file_id) {
   fetch(`/user/files/link/${file_id}`, {
