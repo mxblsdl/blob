@@ -27,8 +27,9 @@
 
 <h2>Uploaded Files</h2>
 <p>
+  <div id="modal-container"></div>
   <!--! Replace with HTMX -->
-  <button onclick="createFolder()">Create folder</button>
+  <button hx-get="/modal/create" hx-trigger="click" hx-include="#folderId" hx-target="#modal-container">Create folder</button>
 </p>
 <!-- Using hidden input to store folder_id value -->
 <input type="hidden" id="folderId" name="folder_id" value="{{ folder_id }}" />
