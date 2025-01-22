@@ -13,8 +13,13 @@
   <td>~</td>
   {% if folder.name != "../" %}
   <td>
-    <!--! replace with htmx -->
-    <a onclick="deleteFolder('{{ folder.id }}')">Delete</a>
+    <a
+      hx-delete="/delete/folder"
+      hx-vals='{"folder_id": "{{ folder.id }}"}'
+      hx-trigger="click"
+      hx-on::after-request="htmx.trigger('#fileTable', 'triggerItems');"
+      >Delete</a
+    >
   </td>
   {% endif %}
 </tr>
@@ -27,10 +32,10 @@
     <!-- Downloading files is not natively supported by HTMX so using a JS function -->
     <a onclick="downloadFile('{{file.id}}')">Download</a>
     <a
-      hx-delete="/delete"
+      hx-delete="/delete/file"
       hx-vals='{"file_id": "{{ file.id }}"}'
       hx-trigger="click"
-      hx-on::after-request="htmx.trigger('#fileTable', 'triggerItems');alertify.success('Object deleted');"
+      hx-on::after-request="htmx.trigger('#fileTable', 'triggerItems');"
       hx-swap="none"
       >Delete</a
     >

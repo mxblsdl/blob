@@ -226,8 +226,9 @@ async def download_file(
         )
 
 
-@router.delete("/delete", response_class=HTMLResponse)
+@router.delete("/delete/file", response_class=HTMLResponse)
 async def delete_file(
+    request: Request,
     file_id: str = Query(...),
     user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
@@ -240,7 +241,71 @@ async def delete_file(
             (file_id, user_id),
         )
         conn.commit()
-    return HTMLResponse("File Deleted")
+    return templates.TemplateResponse(
+        "alert.html",
+        {
+            "request": request,
+            "message": "Object deleted",
+            "type": "success",
+        },
+    )
+
+
+@router.delete("/delete/folder", response_class=HTMLResponse)
+async def delete_folder(
+    request: Request,
+    folder_id: str = Query(...),
+    user_id: str = Depends(get_api_key),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    # Check if the folder is empty
+    with db as conn:
+        res = conn.execute(
+            """
+        SELECT count(*)
+        FROM files 
+        WHERE folder_id = ?
+        AND user_id = ?
+        """,
+            (folder_id, user_id),
+        )
+        file_count = res.fetchone()
+
+        res = conn.execute(
+            """
+        SELECT count(*)
+        FROM folders 
+        WHERE parent_folder_id = ?
+        AND user_id = ?
+        """,
+            (folder_id, user_id),
+        )
+        folder_count = res.fetchone()
+
+        if file_count[0] != 0 or folder_count[0] != 0:
+            return templates.TemplateResponse(
+                "alert.html",
+                {
+                    "request": request,
+                    "message": "Folder is not empty. Cannot delete folders with items",
+                    "type": "error",
+                },
+            )
+        conn.execute(
+            """DELETE FROM folders 
+            WHERE id = ?
+            AND user_id = ?""",
+            (folder_id, user_id),
+        )
+        conn.commit()
+        return templates.TemplateResponse(
+            "alert.html",
+            {
+                "request": request,
+                "message": "Folder deleted",
+                "type": "success",
+            },
+        )
 
 
 @router.post(
@@ -253,7 +318,6 @@ async def create_link(
     user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
-    print("function triggered")
     with db as conn:
         cur = conn.execute(
             """SELECT id 
@@ -323,7 +387,6 @@ async def create_file_path(
     user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
-    print("loading filepath element")
     with db as conn:
         cur = conn.execute(
             """
