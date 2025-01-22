@@ -30,15 +30,13 @@
   <button onclick="createFolder()">Create folder</button>
 </p>
 <!-- Using hidden input to store folder_id value -->
-<!-- TODO I want to turn this into a HTMX trigger -->
 <input type="hidden" id="folderId" name="folder_id" value="{{ folder_id }}" />
+
 <form>
   <code
     id="filePath"
     hx-get="/filepath"
-    hx-target="#filePath"
-    hx-trigger="load"
-    hx-swap="innerHTML"
+    hx-trigger="load, triggerPath from:body"
     hx-include="#folderId"
   ></code>
 </form>
@@ -58,10 +56,10 @@
     hx-trigger="load, triggerItems from:body"
     hx-swap="innerHTML"
     hx-include="#folderId"
+    hx-on::after-request="htmx.trigger('#filePath', 'triggerPath');"
   ></tbody>
 </table>
 <script>
-  //can I use the HTMX js here?
   const dropZone = document.getElementById("dropZone");
 
   ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {

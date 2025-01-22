@@ -16,7 +16,6 @@
 
 // Highlight drop zone when file is dragged over
 
-
 // Handle dropped files
 // dropZone.addEventListener("drop", handleDrop, false);
 
@@ -53,8 +52,6 @@
 //     .catch((error) => console.error("Error:", error));
 // }
 
-
-
 // Delete file from server
 // function deleteFile(fileId) {
 //   const currentDir = localStorage.getItem("currentDir");
@@ -71,21 +68,21 @@
 //     .catch((error) => console.error("Error:", error));
 // }
 
-function createLink(file_id) {
-  fetch(`/user/files/link/${file_id}`, {
-    method: "POST",
-    headers: {
-      access_token: localStorage.getItem("apikey"),
-    },
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      copyText(data.link);
-    })
-    .catch((error) => console.error("error: ", error));
-}
+// function createLink(file_id) {
+//   fetch(`/user/files/link/${file_id}`, {
+//     method: "POST",
+//     headers: {
+//       access_token: localStorage.getItem("apikey"),
+//     },
+//   })
+//     .then((response) => response.json())
+//     .then((data) => {
+//       copyText(data.link);
+//     })
+//     .catch((error) => console.error("error: ", error));
+// }
 
-function copyText(text) {
-  navigator.clipboard.writeText(text);
-  alertify.success("Link copied to clipboard!");
-}
+// function copyText(text) {
+//   navigator.clipboard.writeText(text);
+//   alertify.success("Link copied to clipboard!");
+// }

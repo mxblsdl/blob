@@ -1,6 +1,14 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Request, Query, Form
+from fastapi import (
+    APIRouter,
+    Depends,
+    UploadFile,
+    File,
+    Request,
+    Query,
+    Form,
+    HTTPException,
+)
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
-from fastapi.exceptions import HTTPException
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.db import get_db, generate_token
@@ -68,6 +76,7 @@ async def populate_items(
             "request": request,
             "folders": folders,
             "files": files,
+            "folder_id": folder_id,
         },
     )
 
@@ -235,20 +244,24 @@ async def delete_file(
 
 
 @router.post(
-    "/user/files/link/{file_id}",
-    dependencies=[Depends(get_api_key)],
+    "/createLink",
+    response_class=JSONResponse,
 )
-async def generate_link(
+async def create_link(
     request: Request,
-    file_id: int,
+    file_id: str = Form(...),
+    user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
+    print("function triggered")
     with db as conn:
         cur = conn.execute(
             """SELECT id 
-                           FROM files 
-                           WHERE id = ?""",
-            (file_id,),
+               FROM files 
+               WHERE id = ?
+               and user_id = ?
+               """,
+            (file_id, user_id),
         )
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="File not found")
@@ -268,7 +281,7 @@ async def generate_link(
 
     link = f"{request.base_url}files/share/{token}"
 
-    return {"link": link}
+    return JSONResponse(content={"link": link})
 
 
 @router.get("/files/share/{token}")
@@ -310,6 +323,7 @@ async def create_file_path(
     user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
+    print("loading filepath element")
     with db as conn:
         cur = conn.execute(
             """
