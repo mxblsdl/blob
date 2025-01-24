@@ -1,0 +1,26 @@
+{% extends "base_modal.html" %} {% block modal_content %}
+
+<h2>Create new folder</h2>
+<!-- Replace with HTMX button to create folder -->
+<div id="new-folder">
+  <p>Enter new folder name:</p>
+  <input
+    id="folderName"
+    class="modern-input"
+    name="folder_name"
+    type="text"
+    title="Enter folder name"
+  />
+  <button
+    id="folder-submit"
+    class="modern-button"
+    hx-post="/folder/create"
+    hx-vals='{"folder_id": "{{ folder_id }}"}'
+    hx-include="#folderName"
+    hx-swap="none"
+    hx-on::after-request="htmx.trigger('.close','close');htmx.trigger('#fileTable', 'triggerItems');"
+  >
+    Submit
+  </button>
+</div>
+{% endblock %}

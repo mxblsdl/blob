@@ -240,7 +240,7 @@ async def create_modal(
     folder_id: str = Query(...),
 ):
     return templates.TemplateResponse(
-        "modal.html",
+        "folder_modal.html",
         {"request": request, "folder_id": folder_id},
     )
 
