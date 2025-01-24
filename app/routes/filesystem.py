@@ -1,19 +1,18 @@
 from fastapi import (
-    APIRouter,
-    Depends,
     UploadFile,
-    File,
+    APIRouter,
     Request,
+    HTTPException,
+    Depends,
+    File,
     Query,
     Form,
-    HTTPException,
 )
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.db import get_db, generate_token
 from app.dependencies.auth import get_api_key
-from app.dependencies.models import Folder
 
 import sqlite3
 from datetime import datetime
@@ -177,22 +176,6 @@ def in_root(folder_id: int, db: sqlite3.Connection) -> bool:
         return (False, res[0])
 
 
-@router.post("/add_folder")
-async def add_folder(
-    folder: Folder,
-    user_id: str = Depends(get_api_key),
-    db: sqlite3.Connection = Depends(get_db),
-):
-    with db as conn:
-        conn.execute(
-            """INSERT INTO folders 
-            (user_id, parent_folder_id, folder_name) 
-            VALUES (?, ?, ?)""",
-            (user_id, folder.currentDir, folder.newDir),
-        )
-    return {"message": f"{folder.newDir} folder created successfully"}
-
-
 @router.get("/download/{file_id}")
 async def download_file(
     file_id: str,
@@ -267,7 +250,33 @@ async def close_modal():
     return HTMLResponse("")
 
 
-@router.delete("/delete/folder", response_class=HTMLResponse)
+@router.post("/folder/create", response_class=HTMLResponse)
+async def create_folder(
+    request: Request,
+    folder_id: str = Form(...),
+    folder_name: str = Form(...),
+    user_id: str = Depends(get_api_key),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    with db as conn:
+        conn.execute(
+            """INSERT INTO folders 
+            (user_id, parent_folder_id, folder_name) 
+            VALUES (?, ?, ?)""",
+            (user_id, folder_id, folder_name),
+        )
+        conn.commit()
+    return templates.TemplateResponse(
+        "alert.html",
+        {
+            "request": request,
+            "message": "Folder created",
+            "type": "success",
+        },
+    )
+
+
+@router.delete("/folder/delete", response_class=HTMLResponse)
 async def delete_folder(
     request: Request,
     folder_id: str = Query(...),

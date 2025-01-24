@@ -15,6 +15,7 @@
   <!-- Insert API Key gen button -->
   <h2 id="greeting">Welcome {{ username }}</h2>
   <span>
+    <!-- ! replace with htmx -->
     <button id="api-manage" onclick="manageAPIKeys()">Manage API Keys</button>
     <button id="api-key" onclick="generateAPIKeys()">Generate API Key</button>
   </span>
@@ -28,7 +29,6 @@
 <h2>Uploaded Files</h2>
 <p>
   <div id="modal-container"></div>
-  <!--! Replace with HTMX -->
   <button hx-get="/modal/create" hx-trigger="click" hx-include="#folderId" hx-target="#modal-container">Create folder</button>
 </p>
 <!-- Using hidden input to store folder_id value -->

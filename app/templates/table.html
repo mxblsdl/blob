@@ -14,7 +14,7 @@
   {% if folder.name != "../" %}
   <td>
     <a
-      hx-delete="/delete/folder"
+      hx-delete="/folder/delete"
       hx-vals='{"folder_id": "{{ folder.id }}"}'
       hx-trigger="click"
       hx-on::after-request="htmx.trigger('#fileTable', 'triggerItems');"
