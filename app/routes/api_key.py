@@ -1,4 +1,6 @@
-from fastapi import Depends, APIRouter
+from fastapi import Depends, APIRouter, Request, Query, Response
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 from app.dependencies.db import get_db
 from app.dependencies.auth import get_api_key
@@ -7,16 +9,17 @@ import sqlite3
 import secrets
 
 router = APIRouter()
+templates = Jinja2Templates(directory="app/templates")
 
 
-@router.post("/generate-api-key")
-async def generate_api_key(
+@router.post("/keys/create", response_class=HTMLResponse)
+async def create_api_key(
+    request: Request,
     user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     new_key = secrets.token_urlsafe(16)
 
-    # return apikey
     with db as conn:
         cursor = conn.cursor()
 
@@ -26,14 +29,19 @@ async def generate_api_key(
         )
         conn.commit()
 
-    return new_key
+    return templates.TemplateResponse(
+        "new_key.html",
+        {"request": request, "key": new_key},
+    )
 
 
-@router.get("/get-api-key")
+@router.get("/keys/get", response_class=HTMLResponse)
 async def get_api_keys(
+    request: Request,
     user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
+    # Number of characters to blank out
     n = 15
     with db as conn:
         cursor = conn.cursor()
@@ -43,12 +51,14 @@ async def get_api_keys(
             k.id, 
             k.key
             FROM users u
-            JOIN keys k ON ? = k.user_id
-            AND is_login = 'N'
+            JOIN keys k ON u.id = k.user_id
+            WHERE u.id = ?
+            AND k.is_login = 'N'
             """,
             (user_id,),
         )
         result = cursor.fetchall()
+
     keys = [
         {
             "id": r["id"],
@@ -57,12 +67,16 @@ async def get_api_keys(
         for r in result
     ]
 
-    return {"keys": keys}
+    return templates.TemplateResponse(
+        "key_table.html",
+        {"request": request, "keys": keys},
+    )
 
 
-@router.get("/delete-api-key/{id}", dependencies=[Depends(get_api_key)])
+@router.delete("/keys/delete")
 async def delete_api_key(
-    id: str,
+    key_id: str = Query(...),
+    user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
@@ -72,8 +86,11 @@ async def delete_api_key(
             DELETE FROM keys
             WHERE id = ?
             AND is_login = 'N'
+            AND user_id = ?
             """,
-            (id,),
+            (key_id, user_id),
         )
         conn.commit()
-    return {"message": "success"}
+
+    headers = {"HX-Trigger": "manageKeys"}
+    return Response(status_code=204, headers=headers)
