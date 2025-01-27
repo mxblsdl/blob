@@ -1,0 +1,13 @@
+{% extends "base_modal.html" %} {% block modal_content %}
+
+<div>Copy API key below, this will not be shown again</div>
+<table>
+  <thead></thead>
+  <tbody>
+    <tr>
+      <td>{{ key }}</td>
+      <td><button onclick="copyToClipboard('{{ key }}')">Copy</button></td>
+    </tr>
+  </tbody>
+</table>
+{% endblock %}

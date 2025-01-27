@@ -1,23 +1,25 @@
-from fastapi import APIRouter, Depends
-from fastapi.exceptions import HTTPException
+from fastapi import APIRouter, Depends, Request, Form
+
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 from app.dependencies.db import get_db
 from app.dependencies.auth import pwd_context
-from app.dependencies.models import LoginData
-
 import sqlite3
 import secrets
 
 router = APIRouter()
+templates = Jinja2Templates(directory="app/templates")
 
 
 # Routes
-@router.post("/login")
+@router.post("/login", response_class=HTMLResponse)
 async def login(
-    login_data: LoginData,
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
     db: sqlite3.Connection = Depends(get_db),
 ):
-
     with db as conn:
         cursor = conn.execute(
             """SELECT
@@ -29,23 +31,32 @@ async def login(
             JOIN keys k ON u.id = k.user_id
             WHERE u.username = ?
             """,
-            (login_data.username,),
+            (username,),
         )
-        user = cursor.fetchone()
+        try:
+            id, user, user_password, key = cursor.fetchone()
+        except Exception as e:
+            print(e)
+            return HTMLResponse(
+                content="", status_code=404, headers={"HX-Trigger": "user-not-found"}
+            )
 
-    if user is None:
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+    if not pwd_context.verify(password, user_password):
+        return HTMLResponse(
+            content="", status_code=404, headers={"HX-Trigger": "password-incorrect"}
+        )
+    folder_id = check_root(id, db)
 
-    if not pwd_context.verify(login_data.password, user[2]):
-        raise HTTPException(status_code=401, detail="Invalid password")
-    folder_id = check_root(user[0], db)
-
-    return {
-        "username": user[1],
-        "password": login_data.password,
-        "apikey": user[3],
-        "folderId": folder_id,
-    }
+    # So the response sends the folder_id and the user_id and maybe the api key
+    return templates.TemplateResponse(
+        "dropbox.html",
+        context={
+            "request": request,
+            "username": username,
+            "key": key,
+            "folder_id": folder_id,
+        },
+    )
 
 
 def check_root(
@@ -75,31 +86,62 @@ def check_root(
         return id
 
 
-@router.post("/register")
-async def register(user_data: LoginData, db: sqlite3.Connection = Depends(get_db)):
-
+def check_existing_user(
+    username: str, password: str, db: sqlite3.Connection
+) -> int | None:
     with db as conn:
         cursor = conn.execute("SELECT username FROM users")
         users = cursor.fetchall()
-        if any(user_data.username in values for values in users):
-            raise HTTPException(status_code=400, detail="Username already exists")
-        password = pwd_context.hash(user_data.password)
+        if any(username in values for values in users):
+            return None
+        password = pwd_context.hash(password)
 
         conn.execute(
             "INSERT INTO users (username, password) VALUES (?, ?)",
-            (user_data.username, password),
+            (username, password),
         )
         cur = conn.execute(
             "SELECT id FROM users WHERE username = ?",
-            (user_data.username,),
+            (username,),
         )
-
-        # generate key for general use
         id = cur.fetchone()
         key = secrets.token_urlsafe(16)
         conn.execute(
             "INSERT INTO keys (user_id, key, is_login) VALUES (?, ?, ?)",
             (id[0], key, "Y"),
         )
+        return 1
 
-        return {"message": "User registered successfully"}
+
+@router.post("/register", response_class=HTMLResponse)
+async def register(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    result = check_existing_user(username, password, db)
+    print(result)
+    if result:
+        return templates.TemplateResponse(
+            "alert.html",
+            {
+                "request": request,
+                "message": "User registered successfully",
+                "type": "success",
+            },
+        )
+
+    return templates.TemplateResponse(
+        "register.html",
+        {
+            "request": request,
+            "message": "Registration failed: User already exists",
+            "type": "error",
+        },
+    )
+
+
+@router.get("/show_register", response_class=HTMLResponse)
+async def show_register(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})

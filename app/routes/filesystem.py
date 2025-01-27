@@ -1,10 +1,18 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Request
-from fastapi.responses import StreamingResponse
-from fastapi.exceptions import HTTPException
+from fastapi import (
+    UploadFile,
+    APIRouter,
+    Request,
+    HTTPException,
+    Depends,
+    File,
+    Query,
+    Form,
+)
+from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
 
 from app.dependencies.db import get_db, generate_token
 from app.dependencies.auth import get_api_key
-from app.dependencies.models import Folder, FolderId
 
 import sqlite3
 from datetime import datetime
@@ -12,13 +20,15 @@ import io
 
 
 router = APIRouter()
+templates = Jinja2Templates(directory="app/templates")
 
 
 # Upload functionality
-@router.post("/upload/{current_dir}")
+@router.post("/upload")
 async def upload_file(
-    current_dir: str,
-    user_id=Depends(get_api_key),
+    request: Request,
+    folder_id: str = Form(...),
+    user_id: str = Depends(get_api_key),
     file: UploadFile = File(...),
     db: sqlite3.Connection = Depends(get_db),
 ):
@@ -28,32 +38,52 @@ async def upload_file(
             size = len(file_contents)
             created_at = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
-            cursor = conn.execute(
+            conn.execute(
                 """INSERT OR REPLACE INTO 
                 files (user_id, file_name, folder_id, bin, size, created_at) 
                 VALUES (?, ?, ?, ?, ?, ?)""",
                 (
                     user_id,  # user_id
                     file.filename,  # file_name
-                    current_dir,  # folder _id
+                    folder_id,  # folder _id
                     file_contents,  # bin
                     size,  # size
                     created_at,  # created_at
                 ),
             )
             db.commit()
-
-            id = cursor.lastrowid
-            return {"file_id": id, "filename": file.filename}
+            return JSONResponse(
+                status_code=200, content={"message": "File Upload Successful"}
+            )
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/files")
-async def get_files(
-    folderId: FolderId,
-    user_id: str = Depends(get_api_key),
+@router.get("/items", response_class=HTMLResponse)
+async def populate_items(
+    request: Request,
+    folder_id=Query(...),
+    user_id=Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
+):
+    files = await get_files(folder_id, user_id, db)
+    folders = await get_folders(folder_id, user_id, db)
+
+    return templates.TemplateResponse(
+        "table.html",
+        context={
+            "request": request,
+            "folders": folders,
+            "files": files,
+            "folder_id": folder_id,
+        },
+    )
+
+
+async def get_files(
+    folder_id: int,
+    user_id: str,
+    db: sqlite3.Connection,
 ):
     with db as conn:
         cursor = conn.execute(
@@ -66,26 +96,34 @@ async def get_files(
             FROM files
             WHERE folder_id = ? 
             AND user_id = ?""",
-            (folderId.id, user_id),
+            (folder_id, user_id),
         )
         rows = cursor.fetchall()
-        files = [
-            {
-                "id": row[0],
-                "name": row[1],
-                "size": row[2],
-                "created_at": row[3],
-            }
-            for row in rows
-        ]
-    return {"files": files}
+    files = [
+        {
+            "id": row[0],
+            "name": row[1],
+            "size": row[2],
+            "created_at": row[3],
+        }
+        for row in rows
+    ]
+
+    for file in files:
+        if 1000 < file["size"] <= 999999:
+            file["size"] = str(round(file["size"] / 1000, 1)) + "KB"
+        elif file["size"] > 9999 and file["size"] < 999999999:
+            file["size"] = str(round(file["size"] / 1000000, 1)) + "MB"
+        else:
+            file["size"] = str(file["size"]) + "bytes"
+
+    return files
 
 
-@router.post("/folders")
 async def get_folders(
-    folderId: FolderId,
-    user_id: str = Depends(get_api_key),
-    db: sqlite3.Connection = Depends(get_db),
+    folder_id: int,
+    user_id: str,
+    db: sqlite3.Connection,
 ):
     with db as conn:
         cursor = conn.execute(
@@ -94,7 +132,7 @@ async def get_folders(
             FROM folders 
             WHERE user_id = ?
             AND parent_folder_id = ?""",
-            (user_id, folderId.id),
+            (user_id, folder_id),
         )
         rows = cursor.fetchall()
         folders = [
@@ -108,18 +146,19 @@ async def get_folders(
         ]
 
         # Check if in root
-        root, parent_id = in_root(folderId.id, db)
+        root, parent_id = in_root(folder_id, db)
         if not root:
-            folders.insert(0,
+            folders.insert(
+                0,
                 {
                     "id": parent_id,
                     "user_id": user_id,
                     "parent_id": parent_id,
                     "name": "../",
-                }
+                },
             )
 
-    return {"folders": folders, "current_folder": folderId.id}
+    return folders
 
 
 def in_root(folder_id: int, db: sqlite3.Connection) -> bool:
@@ -137,28 +176,10 @@ def in_root(folder_id: int, db: sqlite3.Connection) -> bool:
         return (False, res[0])
 
 
-@router.post("/add_folder")
-async def add_folder(
-    folder: Folder,
-    user_id: str = Depends(get_api_key),
-    db: sqlite3.Connection = Depends(get_db),
-):
-    with db as conn:
-        conn.execute(
-            """INSERT INTO folders 
-            (user_id, parent_folder_id, folder_name) 
-            VALUES (?, ?, ?)""",
-            (user_id, folder.currentDir, folder.newDir),
-        )
-    return {"message": f"{folder.newDir} folder created successfully"}
-
-
-@router.get(
-    "/user/files/{file_id}",
-    dependencies=[Depends(get_api_key)],
-)
+@router.get("/download/{file_id}")
 async def download_file(
     file_id: str,
+    user_id=Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
@@ -168,14 +189,18 @@ async def download_file(
             file_name, 
             bin 
             FROM files 
-            WHERE id = ?""",
-            (file_id),
+            WHERE id = ?
+            AND user_id = ?
+            """,
+            (file_id, user_id),
         )
         row = cursor.fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="File not found")
 
         filename, content = row
+
+        print(file_id)
 
         return StreamingResponse(
             content=io.BytesIO(content),
@@ -184,39 +209,132 @@ async def download_file(
         )
 
 
-@router.delete(
-    "/user/files/remove/{file_id}",
-    dependencies=[Depends(get_api_key)],
-)
+@router.delete("/delete/file", response_class=HTMLResponse)
 async def delete_file(
-    file_id: str,
+    request: Request,
+    file_id: str = Query(...),
+    user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
         conn.execute(
             """DELETE FROM files 
-            WHERE id = ?""",
-            (file_id,),
+            WHERE id = ?
+            AND user_id = ?""",
+            (file_id, user_id),
         )
         conn.commit()
-        return {"message": "File Deleted"}
+    return templates.TemplateResponse(
+        "alert.html",
+        {
+            "request": request,
+            "message": "Object deleted",
+            "type": "success",
+        },
+    )
+
+
+@router.post("/folder/create", response_class=HTMLResponse)
+async def create_folder(
+    request: Request,
+    folder_id: str = Form(...),
+    folder_name: str = Form(...),
+    user_id: str = Depends(get_api_key),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    with db as conn:
+        conn.execute(
+            """INSERT INTO folders 
+            (user_id, parent_folder_id, folder_name) 
+            VALUES (?, ?, ?)""",
+            (user_id, folder_id, folder_name),
+        )
+        conn.commit()
+    return templates.TemplateResponse(
+        "alert.html",
+        {
+            "request": request,
+            "message": "Folder created",
+            "type": "success",
+        },
+    )
+
+
+@router.delete("/folder/delete", response_class=HTMLResponse)
+async def delete_folder(
+    request: Request,
+    folder_id: str = Query(...),
+    user_id: str = Depends(get_api_key),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    # Check if the folder is empty
+    with db as conn:
+        res = conn.execute(
+            """
+        SELECT count(*)
+        FROM files 
+        WHERE folder_id = ?
+        AND user_id = ?
+        """,
+            (folder_id, user_id),
+        )
+        file_count = res.fetchone()
+
+        res = conn.execute(
+            """
+        SELECT count(*)
+        FROM folders 
+        WHERE parent_folder_id = ?
+        AND user_id = ?
+        """,
+            (folder_id, user_id),
+        )
+        folder_count = res.fetchone()
+
+        if file_count[0] != 0 or folder_count[0] != 0:
+            return templates.TemplateResponse(
+                "alert.html",
+                {
+                    "request": request,
+                    "message": "Folder is not empty. Cannot delete folders with items",
+                    "type": "error",
+                },
+            )
+        conn.execute(
+            """DELETE FROM folders 
+            WHERE id = ?
+            AND user_id = ?""",
+            (folder_id, user_id),
+        )
+        conn.commit()
+        return templates.TemplateResponse(
+            "alert.html",
+            {
+                "request": request,
+                "message": "Folder deleted",
+                "type": "success",
+            },
+        )
 
 
 @router.post(
-    "/user/files/link/{file_id}",
-    dependencies=[Depends(get_api_key)],
+    "/files/share",
+    response_class=JSONResponse,
 )
-async def generate_link(
+async def create_link(
     request: Request,
-    file_id: int,
+    file_id: str = Form(...),
+    user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
     with db as conn:
         cur = conn.execute(
             """SELECT id 
-                           FROM files 
-                           WHERE id = ?""",
-            (file_id,),
+               FROM files 
+               WHERE id = ?
+               and user_id = ?
+               """,
+            (file_id, user_id),
         )
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="File not found")
@@ -236,7 +354,7 @@ async def generate_link(
 
     link = f"{request.base_url}files/share/{token}"
 
-    return {"link": link}
+    return JSONResponse(content={"link": link})
 
 
 @router.get("/files/share/{token}")
@@ -272,10 +390,9 @@ async def get_file_by_token(
     )
 
 
-
-@router.get("/filepath/{folder_id}")
+@router.get("/filepath", response_class=HTMLResponse)
 async def create_file_path(
-    folder_id: int,
+    folder_id: int = Query(...),
     user_id: str = Depends(get_api_key),
     db: sqlite3.Connection = Depends(get_db),
 ):
@@ -301,4 +418,5 @@ async def create_file_path(
             },
         )
         filepath = cur.fetchone()
+
         return filepath[2]

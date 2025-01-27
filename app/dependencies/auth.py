@@ -10,13 +10,19 @@ from app.dependencies.db import get_db
 pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 # API Key dependency
-api_key_header = APIKeyHeader(name="access_token", auto_error=True)
+api_key_header = APIKeyHeader(name="access_token", auto_error=False)
 
 
 async def get_api_key(
     api_key_header: str = Security(api_key_header),
     db: sqlite3.Connection = Depends(get_db),
 ) -> str:
+    if not api_key_header:
+        raise HTTPException(
+            status_code=403,
+            detail="API key is missing. Please provide an API key.",
+        )
+
     cur = db.cursor()
     cur.execute(
         """SELECT u.id
@@ -30,7 +36,7 @@ async def get_api_key(
     if key_record is None:
         raise HTTPException(
             status_code=403,
-            detail="Could not validate credentials",
+            detail="Invalid API key. Please provide a valid API key.",
         )
 
     return key_record["id"]

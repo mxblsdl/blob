@@ -1,0 +1,135 @@
+<script>
+  //  localStorage.setItem("apikey", "{{ key }}");
+</script>
+<script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/include-vals.js"></script>
+<link rel="stylesheet" href="css/table.css" />
+<link rel="stylesheet" href="css/modal.css"/>
+<style>
+  .highlight {
+    background-color: rgb(202, 199, 206);
+  }
+</style>
+<!-- Store API key information and attach to all requests -->
+<input id="key" type="hidden" name="api-key" value="{{ key }}" />
+
+<span class="header">
+  <!-- Insert API Key gen button -->
+  <h2 id="greeting">Welcome {{ username }}</h2>
+  <span>
+    <!-- ! replace with htmx -->
+    <!-- <div id="api-manage-container"></div> -->
+    <button id="api-manage" hx-get="/keys/get" hx-trigger="click" hx-target="#modal-container">Manage API Keys</button>
+    <button id="api-key" hx-post="/keys/create" hx-trigger="click" hx-target="#modal-container">Generate API Key</button>
+  </span>
+</span>
+<h1>Drag and Drop File Upload</h1>
+
+<form id="dropZone" hx-headers='{"access_token":"{{ key }}"}'>
+  Drop files here
+</form>
+
+<h2>Uploaded Files</h2>
+<p>
+  <div id="modal-container"></div>
+  <button hx-get="/modal/create" hx-trigger="click" hx-include="#folderId" hx-target="#modal-container">Create folder</button>
+</p>
+<!-- Using hidden input to store folder_id value -->
+<input type="hidden" id="folderId" name="folder_id" value="{{ folder_id }}" />
+
+<form>
+  <code
+    id="filePath"
+    hx-get="/filepath"
+    hx-trigger="load, triggerPath from:body"
+    hx-include="#folderId"
+  ></code>
+</form>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Size</th>
+      <th>Created At</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody
+    id="fileTable"
+    class="items"
+    hx-get="/items"
+    hx-trigger="load, triggerItems from:body"
+    hx-swap="innerHTML"
+    hx-include="#folderId"
+    hx-on::after-request="htmx.trigger('#filePath', 'triggerPath');"
+  ></tbody>
+</table>
+<script>
+  const dropZone = document.getElementById("dropZone");
+
+  ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    dropZone.addEventListener(
+      eventName,
+      () => {
+        dropZone.classList.add("highlight");
+      },
+      false
+    );
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    dropZone.addEventListener(
+      eventName,
+      () => {
+        dropZone.classList.remove("highlight");
+      },
+      false
+    );
+  });
+
+  dropZone.addEventListener("drop", async (e) => {
+    const files = e.dataTransfer.files;
+    const folder = document.getElementById("folderId").value;
+
+    const formData = new FormData();
+
+    // Add the file to FormData
+    formData.append("file", files[0]);
+
+    // Add additional form data
+    formData.append("folder_id", folder);
+    const apiKey = document.querySelector("#key").value;
+
+    // Form data needs a JS method to attach the data
+    const response = await fetch("/upload", {
+      method: "POST",
+      body: formData,
+      headers: {
+        access_token: apiKey,
+        //"HX-Trigger": "dropZone",
+      },
+    });
+    if (response.ok) {
+      // triggers the update
+      htmx.trigger("#fileTable", "triggerItems");
+      alertify.success("File Upload Successful");
+    } else {
+      alertify.error("Upload Failed");
+    }
+  });
+
+  // Adds api key header to all requests
+  document.body.addEventListener("htmx:configRequest", (e) => {
+    const apiKey = document.querySelector("#key").getAttribute("value");
+    e.detail.headers["access_token"] = apiKey;
+  });
+</script>

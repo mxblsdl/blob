@@ -3,11 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from app.routes import route, login, api_key
+from app.routes import filesystem, login, api_key
 from app.dependencies.db import init_db
 
-# TODO split routes into more files
-# TODO split JS into more files
 
 # Initialize app
 app = FastAPI()
@@ -27,7 +25,7 @@ async def on_startup():
     init_db()
 
 
-app.include_router(route.router)
+app.include_router(filesystem.router)
 app.include_router(login.router)
 app.include_router(api_key.router)
 

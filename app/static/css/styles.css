@@ -8,21 +8,9 @@
   font-size: 20px;
   margin: 20px auto;
 }
-.items {
-  background-color: aliceblue;
-  display: inline flow-root list-item;
-  padding: 1rem;
-}
-
-.items li {
-  margin-top: 0.5rem;
-}
 
 .btn {
   margin-left: 1rem;
-}
-#dropbox {
-  display: none;
 }
 
 .login-container {
@@ -72,9 +60,6 @@
 
 .login-container button:hover {
   background-color: #45a049;
-}
-#register-container {
-  display: none;
 }
 
 .header {

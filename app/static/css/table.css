@@ -46,11 +46,6 @@ td {
   color: #555;
 }
 
-/* Adding space between table and adjacent elements */
-table {
-  margin-bottom: 20px;
-}
-
 /* Style for download and delete buttons */
 a,
 button {
@@ -67,4 +62,13 @@ button {
 a:hover,
 button:hover {
   background-color: #0056b3;
+}
+
+.items {
+  background-color: aliceblue;
+  padding: 1rem;
+}
+
+.items li {
+  margin-top: 0.5rem;
 }
