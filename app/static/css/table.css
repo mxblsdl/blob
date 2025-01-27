@@ -46,11 +46,6 @@ td {
   color: #555;
 }
 
-/* Adding space between table and adjacent elements */
-table {
-  margin-bottom: 20px;
-}
-
 /* Style for download and delete buttons */
 a,
 button {
