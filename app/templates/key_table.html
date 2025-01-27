@@ -1,0 +1,22 @@
+{% extends "base_modal.html" %} {% block modal_content %}
+<table id="api-key-table">
+  <thead>
+    <tr>
+      <th>Key</th>
+      <th>Remove?</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for key in keys %}
+    <tr>
+      <td>{{key.key}}</td>
+      <td>
+        <button hx-delete=/keys/delete hx-vals = '{"key_id": "{{key.id}}" }'
+        hx-swap = "none" hx-on::after-request="htmx.trigger('#api-manage',
+        'click')" >Remove
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

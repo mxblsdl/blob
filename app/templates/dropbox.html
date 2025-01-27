@@ -17,8 +17,9 @@
   <h2 id="greeting">Welcome {{ username }}</h2>
   <span>
     <!-- ! replace with htmx -->
-    <button id="api-manage" onclick="manageAPIKeys()">Manage API Keys</button>
-    <button id="api-key" onclick="generateAPIKeys()">Generate API Key</button>
+    <!-- <div id="api-manage-container"></div> -->
+    <button id="api-manage" hx-get="/keys/get" hx-trigger="click" hx-target="#modal-container">Manage API Keys</button>
+    <button id="api-key" hx-post="/keys/create" hx-trigger="click" hx-target="#modal-container">Generate API Key</button>
   </span>
 </span>
 <h1>Drag and Drop File Upload</h1>

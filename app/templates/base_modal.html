@@ -1,12 +1,15 @@
 <div class="modal" id="myModal">
   <div class="modal-content">
-    <span
+    <button
       class="close"
       hx-get="/modal/close"
       hx-target="#modal-container"
       hx-trigger="click"
-      >Close</span
+      style="margin-bottom: 20px"
     >
+      Close
+    </button>
+    <br />
     {% block modal_content %}
     <!-- Default content can go here or leave it empty -->
     {% endblock %}

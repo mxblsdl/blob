@@ -15,7 +15,7 @@
     <script src="https://unpkg.com/htmx-ext-response-targets@2.0.0/response-targets.js"></script>
     <!-- Alertify -->
     <link rel="stylesheet" href="css/alertify.min.css" />
-    <script src="alertify.min.js"></script>
+    <script src="js/alertify.min.js"></script>
   </head>
   <body>
     <!-- <div hx-ext="response-targets"> -->
@@ -45,13 +45,11 @@
       </button>
     </div>
     <div id="user-not-found"></div>
-    <!-- </div> -->
 
     <div id="register-container"></div>
 
     <div id="dropbox-container"></div>
 
-    <script src="js/apiKeys.js"></script>
     <script>
       document.body.addEventListener("user-not-found", function (evt) {
         alertify.error("User not found!");

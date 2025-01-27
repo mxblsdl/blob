@@ -21,6 +21,8 @@
       >Delete</a
     >
   </td>
+  {% else %}
+  <td>~</td>
   {% endif %}
 </tr>
 {% endfor %} {% for file in files %}
@@ -98,12 +100,22 @@
     URL.revokeObjectURL(objectURL); // Clean up
   }
 
-  function copyToClipboard(event) {
-    const response = event.detail.xhr.response;
-    const data = JSON.parse(response);
+  function copyToClipboard(input) {
+    let textToCopy;
+
+    if (typeof input === "string") {
+      textToCopy = input;
+    } else if (input instanceof Event) {
+      const response = input.detail.xhr.response;
+      const data = JSON.parse(response);
+      textToCopy = data.link;
+    } else {
+      console.error("Invalid input to copyToClipboard");
+      return;
+    }
 
     navigator.clipboard
-      .writeText(data.link)
+      .writeText(textToCopy)
       .then(() => {
         alertify.success("Link copied to clipboard!");
       })
