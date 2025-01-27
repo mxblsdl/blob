@@ -234,22 +234,6 @@ async def delete_file(
     )
 
 
-@router.get("/modal/create", response_class=HTMLResponse)
-async def create_modal(
-    request: Request,
-    folder_id: str = Query(...),
-):
-    return templates.TemplateResponse(
-        "folder_modal.html",
-        {"request": request, "folder_id": folder_id},
-    )
-
-
-@router.get("/modal/close", response_class=HTMLResponse)
-async def close_modal():
-    return HTMLResponse("")
-
-
 @router.post("/folder/create", response_class=HTMLResponse)
 async def create_folder(
     request: Request,
@@ -334,7 +318,7 @@ async def delete_folder(
 
 
 @router.post(
-    "/createLink",
+    "/files/share",
     response_class=JSONResponse,
 )
 async def create_link(

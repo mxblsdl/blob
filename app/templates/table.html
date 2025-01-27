@@ -42,7 +42,7 @@
       >Delete</a
     >
     <a
-      hx-post="/createLink"
+      hx-post="/files/share"
       hx-vals='{"file_id": "{{ file.id }}"}'
       hx-swap="none"
       hx-on::after-request="copyToClipboard(event)"
