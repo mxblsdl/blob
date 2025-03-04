@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.dependencies.db import get_db, generate_token
 from app.dependencies.auth import get_api_key
-
+from typing import Tuple
 import sqlite3
 from datetime import datetime
 import io
@@ -161,7 +161,7 @@ async def get_folders(
     return folders
 
 
-def in_root(folder_id: int, db: sqlite3.Connection) -> bool:
+def in_root(folder_id: int, db: sqlite3.Connection) -> Tuple[bool, int]:
     # I want this to return a tuple with the patent id if False
     with db as conn:
         cursor = conn.execute(

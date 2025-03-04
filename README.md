@@ -39,6 +39,3 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs/privkey.pem -o
 
 During development the docker image can be rebuilt and redeployed with the `deploy.sh` file. You may want to change the name of the image or container as it suits the project. The Docker container can be stopped with `stop.sh` but make sure the container name is consistent between these two files.
 
-## TODO
-
-- Create folder structure for storing data
