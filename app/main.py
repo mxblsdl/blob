@@ -5,10 +5,22 @@ from fastapi.responses import FileResponse
 
 from app.routes import filesystem, login, api_key
 from app.dependencies.db import init_db
+from contextlib import asynccontextmanager
+
+
+# Initialize database on startup
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Code to run on startup
+    init_db()
+    yield
+    # Code to run on shutdown
+    # (if needed, e.g., closing database connections)
+    pass
 
 
 # Initialize app
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,12 +29,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# Initialize database on startup
-@app.on_event("startup")
-async def on_startup():
-    init_db()
 
 
 app.include_router(filesystem.router)

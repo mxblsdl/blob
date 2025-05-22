@@ -1,3 +1,7 @@
+body {
+  font-family: 'Nunito', 'Quicksand', 'Varela Round', 'Comic Sans MS', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
 #dropZone {
   width: 300px;
   height: 200px;
@@ -7,6 +11,10 @@
   line-height: 200px;
   font-size: 20px;
   margin: 20px auto;
+}
+
+.highlight {
+  background-color: rgb(202, 199, 206);
 }
 
 .btn {
@@ -22,13 +30,16 @@
   margin-right: auto;
   margin-left: auto;
 }
+
 .login-container h2 {
   margin: 0 0 15px;
 }
+
 .login-container label {
   display: block;
   margin: 10px 0 5px;
 }
+
 .login-container input[type="text"],
 .login-container input[type="password"] {
   width: 90%;
@@ -37,6 +48,7 @@
   border: 1px solid #ccc;
   border-radius: 5px;
 }
+
 .login-container button {
   width: 90%;
   padding: 10px;
@@ -46,6 +58,7 @@
   border-radius: 5px;
   cursor: pointer;
 }
+
 #register {
   width: 40%;
   background-color: cadetblue;
@@ -54,8 +67,13 @@
   margin-right: auto;
   margin-top: 10px;
 }
+
 #register:hover {
   color: blue;
+}
+
+#register-container {
+  padding-top: 2rem;
 }
 
 .login-container button:hover {
@@ -70,4 +88,14 @@
 #api-key,
 #api-manage {
   height: 2rem;
+}
+
+/* Element being added */
+.htmx-added {
+  opacity: 0;
+}
+
+.htmx-added.htmx-settling {
+  opacity: 1;
+  transition: opacity 500ms ease-in;
 }
