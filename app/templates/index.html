@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head> 
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drag and Drop File Upload</title>
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@2.0.3"
+    integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq"
+    crossorigin="anonymous"></script>
+  <!-- Include Values Extension -->
+  <script src="https://unpkg.com/htmx.org@2.0.3/dist/ext/include-vals.js"></script>
+  <!-- Response Targets Extension -->
+  <script src="https://unpkg.com/htmx-ext-response-targets@2.0.3/response-targets.js"></script>
+  <!-- Alertify -->
+  <link rel="stylesheet" href="css/alertify.min.css" />
+  <script src="js/alertify.min.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Quicksand:wght@400;700&family=Varela+Round&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/table.css" />
+  <link rel="stylesheet" href="css/modal.css" />
+
+  </head>
+
+  <!-- Store API key information and attach to all requests -->
+  <input id="key" type="hidden" name="api-key" value="{{ key }}" />
+
+  <span class="header">
+    <!-- Insert API Key gen button -->
+    <h2 id="greeting">Welcome {{ username }}</h2>
+    <span>
+      <button
+        id="api-manage"
+        hx-get="/keys/get"
+        hx-trigger="click"
+        hx-target="#modal-container"
+      >
+        Manage API Keys
+      </button>
+      <button
+        id="api-key"
+        hx-post="/keys/create"
+        hx-trigger="click"
+        hx-target="#modal-container"
+      >
+        Generate API Key
+      </button>
+    </span>
+  </span>
+  <h1>Drag and Drop File Upload</h1>
+
+  <form
+    id="dropZone"
+    hx-on:dragenter="event.preventDefault(); this.classList.add('highlight');"
+    hx-on:dragover="event.preventDefault(); this.classList.add('highlight');"
+    hx-on:dragleave="event.preventDefault(); this.classList.remove('highlight');"
+    hx-on:drop="event.preventDefault(); handleDrop(event);"
+  >
+    Drop files here
+  </form>
+
+  <h2>Uploaded Files</h2>
+  <div id="modal-container"></div>
+  <button
+    hx-get="/modal/create"
+    hx-trigger="click"
+    hx-include="#folderId"
+    hx-target="#modal-container"
+  >
+    Create folder
+  </button>
+  <!-- Using hidden input to store folder_id value -->
+  <input type="hidden" id="folderId" name="folder_id" value="{{ folder_id }}" />
+
+  <form>
+    <code
+      id="filePath"
+      hx-get="/filepath"
+      hx-trigger="load, triggerPath from:body"
+      hx-include="#folderId"
+    ></code>
+  </form>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Size</th>
+        <th>Created At</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody
+      id="fileTable"
+      class="items"
+      hx-get="/items"
+      hx-trigger="load, triggerItems from:body"
+      hx-swap="innerHTML"
+      hx-include="#folderId"
+      hx-on::after-request="htmx.trigger('#filePath', 'triggerPath');"
+    ></tbody>
+  </table>
+  <script src="js/dropbox.js"></script>
+</html>

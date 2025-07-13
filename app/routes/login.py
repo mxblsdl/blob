@@ -1,24 +1,47 @@
-from fastapi import APIRouter, Depends, Request, Form
+from fastapi import APIRouter, Depends, Request, Form, Cookie
 
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.db import get_db
 from app.dependencies.auth import pwd_context
 import sqlite3
 import secrets
+from jose import jwt, JWTError
+from datetime import datetime
+from typing import Optional
+from datetime import timedelta
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 
+# JWT Token functions
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now() + expires_delta
+    else:
+        expire = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
 # Routes
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
 @router.post("/login", response_class=HTMLResponse)
 async def login(
     request: Request,
     username: str = Form(...),
     password: str = Form(...),
     db: sqlite3.Connection = Depends(get_db),
+    redirect_to: str = Form("/"),
 ):
     with db as conn:
         cursor = conn.execute(
@@ -45,11 +68,35 @@ async def login(
         return HTMLResponse(
             content="", status_code=404, headers={"HX-Trigger": "password-incorrect"}
         )
+    
+    # check if the user has a root folder
     folder_id = check_root(id, db)
+
+
+    # Create JWT token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    access_token = create_access_token(
+        data={"sub": user},
+        expires_delta=access_token_expires,
+    )
+
+    response = RedirectResponse(url=redirect_to, status_code=303)
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,  # Prevents JavaScript access (XSS protection)
+        secure=True,  # Only send over HTTPS in production
+        samesite="lax",  # CSRF protection
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Cookie expiry in seconds
+    )
+
+    return response
+
 
     # So the response sends the folder_id and the user_id and maybe the api key
     return templates.TemplateResponse(
-        "dropbox.html",
+        "index.html",
         context={
             "request": request,
             "username": username,
@@ -145,3 +192,44 @@ async def register(
 @router.get("/show_register", response_class=HTMLResponse)
 async def show_register(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
+
+
+@router.get("/", response_class=HTMLResponse)
+async def index(
+    request: Request, current_user: str | None = None
+):  # TODO replace with get_current_user
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+# Configuration
+# TODO move into a config file
+import os
+
+SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
+def get_current_user(token: Optional[str] = Cookie(None, alias="access_token")):
+    """Dependency to get current user from JWT token in cookie"""
+    if not token:
+        return None
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            return None
+
+        # Check if token is expired (jose handles this automatically, but you can add custom logic)
+        exp = payload.get("exp")
+        if exp and datetime.now().timestamp() > exp:
+            return None
+
+    except JWTError:
+        return None
+
+    # user = get_user(username)
+    return username

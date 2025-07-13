@@ -11,12 +11,9 @@ from contextlib import asynccontextmanager
 # Initialize database on startup
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Code to run on startup
     init_db()
     yield
-    # Code to run on shutdown
-    # (if needed, e.g., closing database connections)
-    pass
+    # pass
 
 
 # Initialize app
