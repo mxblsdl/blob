@@ -1,0 +1,9 @@
+services:
+  dropbox:
+    build: .
+    container_name: dropbox_container
+    ports:
+      - "1234:1234"
+    volumes:
+      - /app/data:/app/data
+    restart: unless-stopped
